@@ -2,7 +2,7 @@
 
 F1 Watchcoach is a race-first learning application that turns real Formula 1 moments into lasting understanding.
 
-Phase 0 is complete. The approved Phase 1 core domain and persistence group is implemented locally, including a reviewed but unapplied PostgreSQL migration. Hosted services are not required for deterministic development or CI.
+Phase 0 is complete. The approved Phase 1 core domain and persistence group is implemented, and its reviewed migration is applied to the dedicated Neon development project. Hosted services remain optional for deterministic development and CI.
 
 ## Local development
 
@@ -61,7 +61,9 @@ npm run db:migrate:deploy
 npm run db:seed
 ```
 
-For local migration authoring, `npm run db:migrate:dev` is available, but it must not be pointed at production. Never reset or destructively change a database as part of normal setup. The core migration has not yet been applied because no development Neon connection is configured.
+For local migration authoring, `npm run db:migrate:dev` is available, but it must not be pointed at production. Never reset or destructively change a database as part of normal setup. The core migration is applied to `f1-watchcoach-development`; its connection string is managed outside this repository.
+
+Current development-database status: schema and Prisma migration history are verified. Canonical seeding is not yet complete because Prisma timed out while starting the seed's interactive transaction on both pooled and direct Neon endpoints. Both failed attempts were atomic and left the core tables empty. The next investigation is explicit transaction wait/timeout configuration before rerunning the seed.
 
 Rollback is forward-only: if an applied core migration needs correction, create and review a compensating migration rather than resetting the database.
 
