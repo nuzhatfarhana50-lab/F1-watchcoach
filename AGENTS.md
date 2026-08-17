@@ -2,14 +2,14 @@
 
 ## Build Execution Ledger
 
-- **Current phase:** Phase 1 — Domain Contracts, Persistence Design, and Canonical Fixtures (blocked on schema approval).
-- **Completed gates:** Phase 0 completed on 2026-08-17. The application shell, environment boundary, structured logging port, error states, deterministic tests, npm lockfile, and GitHub verification workflow are in place.
-- **Active integrations:** None. Phase 0 is deterministic and does not require hosted services.
-- **Approved schema groups:** None. Database schema work remains blocked on explicit approval.
-- **Key implementation decisions:** Next.js 16 App Router; React 19; Node.js runtime; npm; strict TypeScript; Tailwind CSS 4; Vitest; React Testing Library; Playwright 1.55.1; Zod environment validation; centralized structured server logger; Webpack production builds because Turbopack's CSS worker cannot bind its internal port in the managed macOS environment.
-- **Last verified commands:** `npm run verify` passed on 2026-08-17 (lint, typecheck, 3 unit/component tests, production build, and 1 Chromium Playwright test). Browser inspection also passed with no runtime errors, no Next.js overlay, and zero axe WCAG A/AA violations.
-- **Next checkpoint:** Obtain explicit approval for the Phase 1 Prisma model group and migration impact before creating `prisma/schema.prisma` or applying a migration.
-- **Documentation:** `README.md` contains the verified Phase 0 setup and quality workflow and must be expanded as later phases land.
+- **Current phase:** Phase 1 — Domain Contracts, Persistence Design, and Canonical Fixtures. The approved core schema group is implemented; hosted database application and later evidence/content schema groups remain pending.
+- **Completed gates:** Phase 0 completed on 2026-08-17. Phase 1 core deterministic gate completed on 2026-08-17 with normalized Zod contracts, temporal invariants, canonical British/Dutch fixtures, repository ports, an idempotent in-memory adapter, Prisma seed tooling, and reviewed migration SQL.
+- **Active integrations:** Prisma 7.9.1 is configured. No Neon database or other hosted service is connected; the core migration has not been applied to any database.
+- **Approved schema groups:** Phase 1 core approved on 2026-08-17: `Season`, `Circuit`, `GrandPrix`, `Session`, `Race`, `Driver`, `Team`, temporal team identity/membership, `RaceMoment` participants, `Source`, and `ExternalDataReference`. Timing evidence, concept/explanation/media, pgvector, and user schema groups are not approved.
+- **Key implementation decisions:** Next.js 16 App Router; React 19; Node.js runtime; npm; strict TypeScript; Tailwind CSS 4; Vitest; React Testing Library; Playwright 1.55.1; Zod at trust boundaries; normalized fixtures remain richer than the approved persistence group; Prisma uses its PostgreSQL driver adapter and generated client; manual SQL checks enforce ranges and exactly one typed external-reference target; Webpack production builds because Turbopack's CSS worker cannot bind its internal port in the managed macOS environment.
+- **Last verified commands:** `npm run verify` passed on 2026-08-17 (Prisma validation/generation, lint, strict typecheck, 12 deterministic unit/component/schema tests, production build, and 1 Chromium Playwright test). No live database integration test was run because no development `DATABASE_URL` is configured. `npm audit --omit=dev` reports the known `deepmerge-ts@7.1.5` advisory through Prisma's CLI/config path; the offered fix is a breaking Prisma downgrade.
+- **Next checkpoint:** Review and explicitly approve applying `20260817173000_phase1_core` to an intended Neon development database, then verify relational constraints and seed idempotency there. Later Phase 1 timing-evidence and concept/explanation/media schema groups require separate approval.
+- **Documentation:** `README.md` documents local setup, the approved schema boundary, safe migration/seed commands, fixtures, and current verification limits; continue expanding it as later phases land.
 
 Update this ledger after every completed phase and material architecture decision. Keep it concise; durable product and engineering rules below remain authoritative.
 

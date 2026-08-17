@@ -1,0 +1,354 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum SessionType {
+  PRACTICE_1
+  PRACTICE_2
+  PRACTICE_3
+  QUALIFYING
+  SPRINT_SHOOTOUT
+  SPRINT_QUALIFYING
+  SPRINT
+  RACE
+}
+
+enum RaceStatus {
+  SCHEDULED
+  LIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum RaceMomentType {
+  RACE_START
+  OVERTAKE
+  PIT_STOP
+  UNDERCUT
+  OVERCUT
+  STRATEGY_CHANGE
+  SAFETY_CAR
+  VIRTUAL_SAFETY_CAR
+  RED_FLAG
+  PENALTY
+  CRASH
+  CONTACT
+  MECHANICAL_FAILURE
+  TEAM_ORDER
+  RADIO_MESSAGE
+  TYRE_DEGRADATION
+  LOCK_UP
+  RESTART
+  TECHNICAL_ISSUE
+  DRIVER_MISTAKE
+  DRIVER_PERFORMANCE
+  CHAMPIONSHIP_EVENT
+  QUALIFYING_LAP
+}
+
+enum RaceMomentStatus {
+  CURATED
+  DETECTED
+  VERIFIED
+  REJECTED
+}
+
+enum ParticipantRole {
+  PRIMARY
+  SECONDARY
+  AFFECTED
+}
+
+enum SourceProvider {
+  F1
+  FIA
+  OPENF1
+  JOLPICA
+  FASTF1
+  YOUTUBE
+  WIKIMEDIA
+  TEAM
+  DRIVER
+  OTHER
+}
+
+enum SourceKind {
+  OFFICIAL_REPORT
+  STRUCTURED_DATA
+  VIDEO
+  IMAGE
+  DOCUMENT
+  ARTICLE
+}
+
+enum ExternalResourceType {
+  SEASON
+  CIRCUIT
+  GRAND_PRIX
+  SESSION
+  RACE
+  DRIVER
+  TEAM
+  RACE_MOMENT
+}
+
+model Season {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  year               Int                     @unique
+  createdAt          DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime                @updatedAt @db.Timestamptz(3)
+  grandsPrix         GrandPrix[]
+  teamIdentities     TeamSeasonIdentity[]
+  driverMemberships  DriverTeamMembership[]
+  externalReferences ExternalDataReference[]
+}
+
+model Circuit {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  slug               String                  @unique
+  name               String
+  locality           String?
+  country            String
+  countryCode        String                  @db.Char(3)
+  createdAt          DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime                @updatedAt @db.Timestamptz(3)
+  grandsPrix         GrandPrix[]
+  externalReferences ExternalDataReference[]
+}
+
+model GrandPrix {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  seasonId           String                  @db.Uuid
+  circuitId          String                  @db.Uuid
+  round              Int
+  officialName       String
+  shortName          String
+  startDate          DateTime                @db.Date
+  endDate            DateTime                @db.Date
+  createdAt          DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime                @updatedAt @db.Timestamptz(3)
+  season             Season                  @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  circuit            Circuit                 @relation(fields: [circuitId], references: [id], onDelete: Restrict)
+  sessions           Session[]
+  race               Race?
+  externalReferences ExternalDataReference[]
+
+  @@unique([seasonId, round])
+  @@index([circuitId])
+}
+
+model Session {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  grandPrixId        String                  @db.Uuid
+  type               SessionType
+  name               String
+  startsAt           DateTime                @db.Timestamptz(3)
+  endsAt             DateTime?               @db.Timestamptz(3)
+  createdAt          DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime                @updatedAt @db.Timestamptz(3)
+  grandPrix          GrandPrix               @relation(fields: [grandPrixId], references: [id], onDelete: Cascade)
+  race               Race?
+  moments            RaceMoment[]
+  externalReferences ExternalDataReference[]
+
+  @@unique([grandPrixId, type])
+}
+
+model Race {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  grandPrixId        String                  @unique @db.Uuid
+  sessionId          String                  @unique @db.Uuid
+  status             RaceStatus              @default(SCHEDULED)
+  scheduledLaps      Int?
+  actualLaps         Int?
+  startedAt          DateTime?               @db.Timestamptz(3)
+  endedAt            DateTime?               @db.Timestamptz(3)
+  createdAt          DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime                @updatedAt @db.Timestamptz(3)
+  grandPrix          GrandPrix               @relation(fields: [grandPrixId], references: [id], onDelete: Cascade)
+  session            Session                 @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  moments            RaceMoment[]
+  externalReferences ExternalDataReference[]
+}
+
+model Driver {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  slug               String                  @unique
+  givenName          String
+  familyName         String
+  code               String?
+  permanentNumber    Int?
+  nationality        String?
+  createdAt          DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime                @updatedAt @db.Timestamptz(3)
+  memberships        DriverTeamMembership[]
+  moments            RaceMomentDriver[]
+  externalReferences ExternalDataReference[]
+}
+
+model Team {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  slug               String                  @unique
+  canonicalName      String
+  createdAt          DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime                @updatedAt @db.Timestamptz(3)
+  seasonIdentities   TeamSeasonIdentity[]
+  driverMemberships  DriverTeamMembership[]
+  moments            RaceMomentTeam[]
+  externalReferences ExternalDataReference[]
+}
+
+model TeamSeasonIdentity {
+  id              String   @id @default(uuid()) @db.Uuid
+  teamId          String   @db.Uuid
+  seasonId        String   @db.Uuid
+  displayName     String
+  constructorName String
+  nationality     String?
+  validFrom       DateTime @db.Date
+  validTo         DateTime? @db.Date
+  createdAt       DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+  team            Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  season          Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, seasonId, validFrom])
+  @@index([seasonId])
+}
+
+model DriverTeamMembership {
+  id         String    @id @default(uuid()) @db.Uuid
+  driverId   String    @db.Uuid
+  teamId     String    @db.Uuid
+  seasonId   String    @db.Uuid
+  carNumber  Int?
+  validFrom  DateTime  @db.Date
+  validTo    DateTime? @db.Date
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @db.Timestamptz(3)
+  driver     Driver    @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  team       Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  season     Season    @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@unique([driverId, teamId, seasonId, validFrom])
+  @@index([teamId, seasonId])
+  @@index([seasonId])
+}
+
+model RaceMoment {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  raceId             String                  @db.Uuid
+  sessionId          String                  @db.Uuid
+  slug               String
+  type               RaceMomentType
+  status             RaceMomentStatus        @default(CURATED)
+  title              String
+  summary            String
+  lapNumber          Int?
+  occurredAt         DateTime?               @db.Timestamptz(3)
+  sequence           Int
+  importance         Int                     @default(3)
+  createdAt          DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime                @updatedAt @db.Timestamptz(3)
+  race               Race                    @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  session            Session                 @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  drivers            RaceMomentDriver[]
+  teams              RaceMomentTeam[]
+  sources            RaceMomentSource[]
+  externalReferences ExternalDataReference[]
+
+  @@unique([raceId, slug])
+  @@unique([raceId, sequence])
+  @@index([sessionId, lapNumber])
+  @@index([type, status])
+}
+
+model RaceMomentDriver {
+  raceMomentId String          @db.Uuid
+  driverId     String          @db.Uuid
+  role         ParticipantRole @default(PRIMARY)
+  raceMoment   RaceMoment      @relation(fields: [raceMomentId], references: [id], onDelete: Cascade)
+  driver       Driver          @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@id([raceMomentId, driverId])
+  @@index([driverId])
+}
+
+model RaceMomentTeam {
+  raceMomentId String          @db.Uuid
+  teamId       String          @db.Uuid
+  role         ParticipantRole @default(PRIMARY)
+  raceMoment   RaceMoment      @relation(fields: [raceMomentId], references: [id], onDelete: Cascade)
+  team         Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([raceMomentId, teamId])
+  @@index([teamId])
+}
+
+model Source {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  provider           SourceProvider
+  kind               SourceKind
+  title              String
+  url                String                  @unique
+  publishedAt        DateTime?               @db.Timestamptz(3)
+  retrievedAt        DateTime                @default(now()) @db.Timestamptz(3)
+  createdAt          DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime                @updatedAt @db.Timestamptz(3)
+  moments            RaceMomentSource[]
+  externalReferences ExternalDataReference[]
+}
+
+model RaceMomentSource {
+  raceMomentId String     @db.Uuid
+  sourceId     String     @db.Uuid
+  raceMoment   RaceMoment @relation(fields: [raceMomentId], references: [id], onDelete: Cascade)
+  source       Source     @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@id([raceMomentId, sourceId])
+  @@index([sourceId])
+}
+
+model ExternalDataReference {
+  id              String               @id @default(uuid()) @db.Uuid
+  provider        SourceProvider
+  resourceType    ExternalResourceType
+  externalId      String
+  sourceId        String               @db.Uuid
+  sourceUrl       String?
+  fetchedAt       DateTime             @default(now()) @db.Timestamptz(3)
+  sourceTimestamp DateTime?            @db.Timestamptz(3)
+  seasonId        String?              @db.Uuid
+  circuitId       String?              @db.Uuid
+  grandPrixId     String?              @db.Uuid
+  sessionId       String?              @db.Uuid
+  raceId          String?              @db.Uuid
+  driverId        String?              @db.Uuid
+  teamId          String?              @db.Uuid
+  raceMomentId    String?              @db.Uuid
+  source          Source               @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  season          Season?              @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  circuit         Circuit?             @relation(fields: [circuitId], references: [id], onDelete: Cascade)
+  grandPrix       GrandPrix?           @relation(fields: [grandPrixId], references: [id], onDelete: Cascade)
+  session         Session?             @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  race            Race?                @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  driver          Driver?              @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  team            Team?                @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  raceMoment      RaceMoment?          @relation(fields: [raceMomentId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, resourceType, externalId])
+  @@index([sourceId])
+  @@index([seasonId])
+  @@index([circuitId])
+  @@index([grandPrixId])
+  @@index([sessionId])
+  @@index([raceId])
+  @@index([driverId])
+  @@index([teamId])
+  @@index([raceMomentId])
+}
