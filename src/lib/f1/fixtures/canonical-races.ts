@@ -87,6 +87,38 @@ export const canonicalRaceFixtures = validateFixtureCollection({
     { id: "72000000-0000-4000-8000-000000000004", driverId: ids.verstappen, teamId: ids.redBull, seasonId: ids.season2023, carNumber: 1, validFrom: "2023-01-01", validTo: "2023-12-31", sourceIds: [ids.sourceF1Dutch] },
     { id: "72000000-0000-4000-8000-000000000005", driverId: ids.perez, teamId: ids.redBull, seasonId: ids.season2023, carNumber: 11, validFrom: "2023-01-01", validTo: "2023-12-31", sourceIds: [ids.sourceF1Dutch] },
   ],
+  laps: [
+    { id: "b0000000-0000-4000-8000-000000000001", sessionId: ids.britishSession, driverId: ids.hamilton, number: 38, isPersonalBest: false, sourceId: ids.sourceF1British },
+    { id: "b0000000-0000-4000-8000-000000000002", sessionId: ids.britishSession, driverId: ids.norris, number: 39, isPersonalBest: false, sourceId: ids.sourceF1British },
+    { id: "b0000000-0000-4000-8000-000000000003", sessionId: ids.britishSession, driverId: ids.verstappen, number: 48, isPersonalBest: false, sourceId: ids.sourceF1British },
+    { id: "b0000000-0000-4000-8000-000000000004", sessionId: ids.dutchSession, driverId: ids.perez, number: 1, isPersonalBest: false, sourceId: ids.sourceF1Dutch },
+  ],
+  positions: [
+    { id: "b1000000-0000-4000-8000-000000000001", sessionId: ids.britishSession, driverId: ids.hamilton, sequence: 1, lapNumber: 39, position: 1, sourceId: ids.sourceF1British },
+    { id: "b1000000-0000-4000-8000-000000000002", sessionId: ids.britishSession, driverId: ids.norris, sequence: 1, lapNumber: 39, position: 2, sourceId: ids.sourceF1British },
+    { id: "b1000000-0000-4000-8000-000000000003", sessionId: ids.britishSession, driverId: ids.verstappen, sequence: 1, lapNumber: 48, position: 2, sourceId: ids.sourceF1British },
+  ],
+  pitStops: [
+    { id: "b2000000-0000-4000-8000-000000000001", sessionId: ids.britishSession, driverId: ids.hamilton, stopNumber: 2, lapNumber: 38, sourceId: ids.sourceF1British },
+    { id: "b2000000-0000-4000-8000-000000000002", sessionId: ids.britishSession, driverId: ids.norris, stopNumber: 2, lapNumber: 39, stationaryDurationMs: 4500, sourceId: ids.sourceF1British },
+    { id: "b2000000-0000-4000-8000-000000000003", sessionId: ids.britishSession, driverId: ids.verstappen, stopNumber: 2, lapNumber: 38, sourceId: ids.sourceF1British },
+    { id: "b2000000-0000-4000-8000-000000000004", sessionId: ids.dutchSession, driverId: ids.perez, stopNumber: 1, lapNumber: 1, sourceId: ids.sourceF1Dutch },
+  ],
+  tyreStints: [
+    { id: "b3000000-0000-4000-8000-000000000001", sessionId: ids.britishSession, driverId: ids.hamilton, stintNumber: 3, startLap: 39, endLap: 52, compound: "soft", tyreAgeAtStart: 0, sourceId: ids.sourceF1British },
+    { id: "b3000000-0000-4000-8000-000000000002", sessionId: ids.britishSession, driverId: ids.norris, stintNumber: 3, startLap: 40, endLap: 52, compound: "soft", tyreAgeAtStart: 0, sourceId: ids.sourceF1British },
+    { id: "b3000000-0000-4000-8000-000000000003", sessionId: ids.britishSession, driverId: ids.verstappen, stintNumber: 3, startLap: 39, endLap: 52, compound: "hard", tyreAgeAtStart: 0, sourceId: ids.sourceF1British },
+    { id: "b3000000-0000-4000-8000-000000000004", sessionId: ids.dutchSession, driverId: ids.perez, stintNumber: 2, startLap: 2, compound: "intermediate", tyreAgeAtStart: 0, sourceId: ids.sourceF1Dutch },
+  ],
+  raceControlEvents: [
+    { id: "b4000000-0000-4000-8000-000000000001", sessionId: ids.dutchSession, sequence: 1, lapNumber: 64, category: "redFlag", message: "The race was red-flagged after Zhou Guanyu crashed as the rain intensified.", sourceId: ids.sourceF1Dutch },
+  ],
+  results: [
+    { id: "b5000000-0000-4000-8000-000000000001", sessionId: ids.britishSession, driverId: ids.hamilton, teamId: ids.mercedes, classification: 1, gridPosition: 2, lapsCompleted: 52, points: 25, status: "Finished", sourceId: ids.sourceFiaBritish },
+    { id: "b5000000-0000-4000-8000-000000000002", sessionId: ids.britishSession, driverId: ids.verstappen, teamId: ids.redBull, classification: 2, gridPosition: 4, lapsCompleted: 52, points: 18, status: "Finished", sourceId: ids.sourceFiaBritish },
+    { id: "b5000000-0000-4000-8000-000000000003", sessionId: ids.britishSession, driverId: ids.norris, teamId: ids.mclaren, classification: 3, gridPosition: 3, lapsCompleted: 52, points: 15, status: "Finished", sourceId: ids.sourceFiaBritish },
+  ],
+  championshipStandings: [],
   moments: [
     {
       id: ids.hamiltonMoment, raceId: ids.britishRace, sessionId: ids.britishSession, slug: "hamilton-times-final-stop", type: "strategyChange", status: "curated", title: "Hamilton times the switch back to slicks", summary: "Hamilton stopped for soft tyres on lap 38; Norris stopped a lap later and emerged behind him.", lapNumber: 39, sequence: 1, importance: 5,

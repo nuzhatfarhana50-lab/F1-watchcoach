@@ -6,18 +6,25 @@ import type {
   driverSchema,
   driverTeamMembershipSchema,
   externalDataReferenceSchema,
+  championshipStandingSchema,
   grandPrixSchema,
   mediaReferenceSchema,
+  lapSchema,
   momentConnectionSchema,
   raceEvidenceSchema,
   raceFixtureCollectionSchema,
   raceMomentSchema,
+  pitStopSchema,
+  positionRecordSchema,
+  raceControlEventSchema,
+  resultSchema,
   raceSchema,
   seasonSchema,
   sessionSchema,
   sourceSchema,
   teamSchema,
   teamSeasonIdentitySchema,
+  tyreStintSchema,
 } from "./schemas";
 
 export type Source = z.infer<typeof sourceSchema>;
@@ -31,6 +38,13 @@ export type Driver = z.infer<typeof driverSchema>;
 export type Team = z.infer<typeof teamSchema>;
 export type TeamSeasonIdentity = z.infer<typeof teamSeasonIdentitySchema>;
 export type DriverTeamMembership = z.infer<typeof driverTeamMembershipSchema>;
+export type Lap = z.infer<typeof lapSchema>;
+export type PositionRecord = z.infer<typeof positionRecordSchema>;
+export type PitStop = z.infer<typeof pitStopSchema>;
+export type TyreStint = z.infer<typeof tyreStintSchema>;
+export type RaceControlEvent = z.infer<typeof raceControlEventSchema>;
+export type Result = z.infer<typeof resultSchema>;
+export type ChampionshipStanding = z.infer<typeof championshipStandingSchema>;
 export type RaceEvidence = z.infer<typeof raceEvidenceSchema>;
 export type ConceptReference = z.infer<typeof conceptReferenceSchema>;
 export type MomentConnection = z.infer<typeof momentConnectionSchema>;

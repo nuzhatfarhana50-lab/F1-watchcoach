@@ -45,6 +45,13 @@ const externalResourceTypeSchema = z.enum([
   "driver",
   "team",
   "raceMoment",
+  "lap",
+  "position",
+  "pitStop",
+  "tyreStint",
+  "raceControlEvent",
+  "result",
+  "championshipStanding",
 ]);
 
 export const externalDataReferenceSchema = z.object({
@@ -157,6 +164,81 @@ export const driverTeamMembershipSchema = z.object({
   validFrom: dateSchema,
   validTo: dateSchema.optional(),
   sourceIds: sourceIdsSchema,
+});
+
+const primarySourceSchema = z.object({
+  id: idSchema,
+  sourceId: idSchema,
+});
+
+export const lapSchema = primarySourceSchema.extend({
+  sessionId: idSchema,
+  driverId: idSchema,
+  number: z.number().int().positive(),
+  startedAt: dateTimeSchema.optional(),
+  durationMs: z.number().int().positive().optional(),
+  isPersonalBest: z.boolean().default(false),
+});
+
+export const positionRecordSchema = primarySourceSchema.extend({
+  sessionId: idSchema,
+  driverId: idSchema,
+  sequence: z.number().int().positive(),
+  recordedAt: dateTimeSchema.optional(),
+  lapNumber: z.number().int().positive().optional(),
+  position: z.number().int().positive(),
+});
+
+export const pitStopSchema = primarySourceSchema.extend({
+  sessionId: idSchema,
+  driverId: idSchema,
+  stopNumber: z.number().int().positive(),
+  lapNumber: z.number().int().positive(),
+  occurredAt: dateTimeSchema.optional(),
+  stationaryDurationMs: z.number().int().nonnegative().optional(),
+  pitLaneDurationMs: z.number().int().nonnegative().optional(),
+});
+
+export const tyreStintSchema = primarySourceSchema.extend({
+  sessionId: idSchema,
+  driverId: idSchema,
+  stintNumber: z.number().int().positive(),
+  startLap: z.number().int().positive(),
+  endLap: z.number().int().positive().optional(),
+  compound: z.enum(["soft", "medium", "hard", "intermediate", "wet", "unknown"]),
+  tyreAgeAtStart: z.number().int().nonnegative().default(0),
+});
+
+export const raceControlEventSchema = primarySourceSchema.extend({
+  sessionId: idSchema,
+  sequence: z.number().int().positive(),
+  occurredAt: dateTimeSchema.optional(),
+  lapNumber: z.number().int().positive().optional(),
+  category: z.enum(["safetyCar", "virtualSafetyCar", "redFlag", "penalty", "flag", "weather", "other"]),
+  message: z.string().min(1),
+});
+
+export const resultSchema = primarySourceSchema.extend({
+  sessionId: idSchema,
+  driverId: idSchema,
+  teamId: idSchema,
+  classification: z.number().int().positive().optional(),
+  gridPosition: z.number().int().nonnegative().optional(),
+  lapsCompleted: z.number().int().nonnegative(),
+  points: z.number().nonnegative(),
+  status: z.string().min(1),
+  fastestLapRank: z.number().int().positive().optional(),
+});
+
+export const championshipStandingSchema = primarySourceSchema.extend({
+  seasonId: idSchema,
+  afterGrandPrixId: idSchema,
+  kind: z.enum(["driver", "constructor"]),
+  driverId: idSchema.optional(),
+  teamId: idSchema.optional(),
+  position: z.number().int().positive(),
+  points: z.number().nonnegative(),
+  wins: z.number().int().nonnegative(),
 });
 
 const evidenceBaseSchema = z.object({
@@ -304,5 +386,12 @@ export const raceFixtureCollectionSchema = z.object({
   teams: z.array(teamSchema).min(1),
   teamSeasonIdentities: z.array(teamSeasonIdentitySchema).min(1),
   driverTeamMemberships: z.array(driverTeamMembershipSchema).min(1),
+  laps: z.array(lapSchema).min(1),
+  positions: z.array(positionRecordSchema).min(1),
+  pitStops: z.array(pitStopSchema).min(1),
+  tyreStints: z.array(tyreStintSchema).min(1),
+  raceControlEvents: z.array(raceControlEventSchema),
+  results: z.array(resultSchema).min(1),
+  championshipStandings: z.array(championshipStandingSchema),
   moments: z.array(raceMomentSchema).min(1),
 });

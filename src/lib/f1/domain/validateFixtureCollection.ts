@@ -49,6 +49,13 @@ export function validateFixtureCollection(input: unknown): RaceFixtureCollection
   const drivers = indexById(fixture.drivers, "driver");
   const teams = indexById(fixture.teams, "team");
   const moments = indexById(fixture.moments, "raceMoment");
+  const laps = indexById(fixture.laps, "lap");
+  const positions = indexById(fixture.positions, "position");
+  const pitStops = indexById(fixture.pitStops, "pitStop");
+  const tyreStints = indexById(fixture.tyreStints, "tyreStint");
+  const raceControlEvents = indexById(fixture.raceControlEvents, "raceControlEvent");
+  const results = indexById(fixture.results, "result");
+  const championshipStandings = indexById(fixture.championshipStandings, "championshipStanding");
 
   const sourcedObjects = [
     ...fixture.seasons,
@@ -97,6 +104,54 @@ export function validateFixtureCollection(input: unknown): RaceFixtureCollection
     requireReference(seasons, membership.seasonId, "membership.season");
     assertDateRange(membership.validFrom, membership.validTo, membership.id);
   }
+  for (const lap of fixture.laps) {
+    requireReference(sessions, lap.sessionId, "lap.session");
+    requireReference(drivers, lap.driverId, "lap.driver");
+    requireReference(sources, lap.sourceId, "lap.source");
+  }
+  for (const position of fixture.positions) {
+    requireReference(sessions, position.sessionId, "position.session");
+    requireReference(drivers, position.driverId, "position.driver");
+    requireReference(sources, position.sourceId, "position.source");
+  }
+  for (const pitStop of fixture.pitStops) {
+    requireReference(sessions, pitStop.sessionId, "pitStop.session");
+    requireReference(drivers, pitStop.driverId, "pitStop.driver");
+    requireReference(sources, pitStop.sourceId, "pitStop.source");
+  }
+  for (const stint of fixture.tyreStints) {
+    requireReference(sessions, stint.sessionId, "tyreStint.session");
+    requireReference(drivers, stint.driverId, "tyreStint.driver");
+    requireReference(sources, stint.sourceId, "tyreStint.source");
+    if (stint.endLap && stint.startLap > stint.endLap) {
+      throw new DomainInvariantError("invalidDateRange", "Tyre stint ends before it begins", { tyreStintId: stint.id });
+    }
+  }
+  for (const event of fixture.raceControlEvents) {
+    requireReference(sessions, event.sessionId, "raceControlEvent.session");
+    requireReference(sources, event.sourceId, "raceControlEvent.source");
+  }
+  for (const result of fixture.results) {
+    requireReference(sessions, result.sessionId, "result.session");
+    requireReference(drivers, result.driverId, "result.driver");
+    requireReference(teams, result.teamId, "result.team");
+    requireReference(sources, result.sourceId, "result.source");
+  }
+  for (const standing of fixture.championshipStandings) {
+    const grandPrix = requireReference(grandsPrix, standing.afterGrandPrixId, "standing.afterGrandPrix");
+    requireReference(seasons, standing.seasonId, "standing.season");
+    requireReference(sources, standing.sourceId, "standing.source");
+    if (grandPrix.seasonId !== standing.seasonId) {
+      throw new DomainInvariantError("mismatchedRelationship", "Standing Grand Prix does not belong to its season", { standingId: standing.id });
+    }
+    const hasDriver = standing.driverId !== undefined;
+    const hasTeam = standing.teamId !== undefined;
+    if (hasDriver === hasTeam || (standing.kind === "driver") !== hasDriver) {
+      throw new DomainInvariantError("mismatchedRelationship", "Standing must target exactly one entity matching its kind", { standingId: standing.id });
+    }
+    if (standing.driverId) requireReference(drivers, standing.driverId, "standing.driver");
+    if (standing.teamId) requireReference(teams, standing.teamId, "standing.team");
+  }
   for (const moment of fixture.moments) {
     const race = requireReference(races, moment.raceId, "moment.race");
     if (race.sessionId !== moment.sessionId) {
@@ -125,7 +180,7 @@ export function validateFixtureCollection(input: unknown): RaceFixtureCollection
     }
   }
 
-  const entityIndexes = { season: seasons, circuit: circuits, grandPrix: grandsPrix, session: sessions, race: races, driver: drivers, team: teams, raceMoment: moments };
+  const entityIndexes = { season: seasons, circuit: circuits, grandPrix: grandsPrix, session: sessions, race: races, driver: drivers, team: teams, raceMoment: moments, lap: laps, position: positions, pitStop: pitStops, tyreStint: tyreStints, raceControlEvent: raceControlEvents, result: results, championshipStanding: championshipStandings };
   const externalKeys = new Set<string>();
   indexById(fixture.externalReferences, "externalReference");
   for (const reference of fixture.externalReferences) {
