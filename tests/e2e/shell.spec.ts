@@ -72,3 +72,17 @@ test("internal AI workflow trigger is unavailable without server configuration",
   expect(response.status()).toBe(503);
   await expect(response.json()).resolves.toEqual({ error: "AI workflow is not configured" });
 });
+
+test("live ingestion boundaries fail closed while historical learning stays available", async ({ request, page }) => {
+  const ingestion = await request.post("/api/ingestion/live", { data: { sessionKey: 9539 } });
+  expect(ingestion.status()).toBe(503);
+  const cron = await request.get("/api/cron/live");
+  expect(cron.status()).toBe(503);
+  const live = await request.get("/api/live/9539");
+  expect(live.status()).toBe(503);
+
+  await page.goto("/live/9539");
+  await expect(page.getByRole("heading", { name: "Live timing is unavailable." })).toBeVisible();
+  await page.getByRole("link", { name: "Races" }).first().click();
+  await expect(page.getByRole("heading", { name: "Start with a race you watched." })).toBeVisible();
+});

@@ -32,4 +32,11 @@ describe("parseServerEnvironment", () => {
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_configured_value",
     })).toThrowError(new EnvironmentConfigurationError(["CLERK_SECRET_KEY"]));
   });
+
+  it("requires Redis REST configuration as a pair", () => {
+    expect(() => parseServerEnvironment({
+      NODE_ENV: "test",
+      REDIS_REST_URL: "https://redis.example.test",
+    })).toThrowError(new EnvironmentConfigurationError(["REDIS_REST_TOKEN"]));
+  });
 });

@@ -79,6 +79,14 @@ The Responses API requests strict JSON-schema output and Zod validates it again 
 
 Vercel Workflow compiles explanation and embedding work into durable steps. The internal trigger is `POST /api/internal/ai/explanations`, requires `AI_WORKFLOW_SECRET`, validates a moment UUID, and only enqueues work. It is unavailable by default and never runs during page rendering or deterministic CI.
 
+## Live ingestion
+
+Phase 6 adds a secured `POST /api/ingestion/live` trigger and `GET /api/cron/live` scheduler boundary. Both only start the durable ingestion Workflow; provider fetching, normalized cache publication, moment detection, selective persistence, enrichment, and final publication are separate idempotent checkpoints. `GET /api/live/[sessionKey]` and `/live/[sessionKey]` expose the same serializable live-moment contract as historical moments.
+
+Redis REST stores short-lived session state. PostgreSQL remains authoritative: candidates are persisted only when the OpenF1 session key resolves to a known internal race, and deterministic IDs prevent duplicates on retry. Missing or failed Redis produces an explicit unavailable state; expired checkpoints are labeled stale. OpenF1 signals create event candidates, while AI is reserved for later explanation and never establishes the underlying event truth.
+
+The checked-in Vercel Cron schedule runs every five minutes and therefore requires a Vercel Pro plan. Set `LIVE_SESSION_KEY` only for the intended active race session. Hobby environments should remove or change that schedule before deployment; cron runs only in production.
+
 Workflow 4.8.3 currently brings transitive versions with published nanoid/undici advisories. Scoped npm overrides pin patched releases, and the production build plus deterministic suite verify compatibility. The remaining production audit finding is the documented Prisma CLI/config `deepmerge-ts` advisory.
 
 ## Provider boundaries
@@ -140,6 +148,10 @@ Copy `.env.example` to `.env.local`. Current variables are:
 - `AI_WORKFLOW_SECRET`: optional 32+ character bearer secret for the internal workflow trigger.
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`: optional Clerk browser key; must be configured with `CLERK_SECRET_KEY`.
 - `CLERK_SECRET_KEY`: optional Clerk server key; never exposed to client code.
+- `INGESTION_SECRET`: optional 32+ character bearer secret for manual live-ingestion triggers.
+- `CRON_SECRET`: optional 32+ character bearer secret automatically sent by Vercel Cron.
+- `REDIS_REST_URL` and `REDIS_REST_TOKEN`: optional pair for shared ephemeral live state; in-memory state is used only for deterministic/local composition.
+- `LIVE_SESSION_KEY`: optional positive OpenF1 session key used by the cron trigger.
 
 Do not commit `.env.local` or credentials.
 
