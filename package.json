@@ -19,6 +19,7 @@
     "db:migrate:dev": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
+    "db:verify:canonical": "tsx prisma/verifyCanonicalSeed.ts",
     "verify": "npm run db:validate && npm run db:generate && npm run lint && npm run typecheck && npm run test && npm run build && npm run test:e2e"
   },
   "dependencies": {

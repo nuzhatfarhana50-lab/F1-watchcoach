@@ -4,6 +4,11 @@ import { canonicalRaceFixtures } from "@/lib/f1/fixtures/canonical-races";
 
 const upperSnake = (value: string) => value.replace(/([a-z])([A-Z])/g, "$1_$2").toUpperCase();
 
+export const canonicalSeedTransactionOptions = {
+  maxWait: 30_000,
+  timeout: 120_000,
+} as const;
+
 export async function seedCanonicalFixtures(database: PrismaClient) {
   const fixture = canonicalRaceFixtures;
   await database.$transaction(async (tx) => {
@@ -33,6 +38,6 @@ export async function seedCanonicalFixtures(database: PrismaClient) {
       const relation = { [entityKey]: reference.entityId };
       await tx.externalDataReference.upsert({ where: { id: reference.id }, update: { provider: SourceProvider[upperSnake(reference.provider) as keyof typeof SourceProvider], resourceType: ExternalResourceType[upperSnake(reference.resourceType) as keyof typeof ExternalResourceType], externalId: reference.externalId, sourceId: reference.sourceId, sourceUrl: reference.sourceUrl, fetchedAt: new Date(reference.fetchedAt), sourceTimestamp: reference.sourceTimestamp ? new Date(reference.sourceTimestamp) : null, ...relation }, create: { id: reference.id, provider: SourceProvider[upperSnake(reference.provider) as keyof typeof SourceProvider], resourceType: ExternalResourceType[upperSnake(reference.resourceType) as keyof typeof ExternalResourceType], externalId: reference.externalId, sourceId: reference.sourceId, sourceUrl: reference.sourceUrl, fetchedAt: new Date(reference.fetchedAt), sourceTimestamp: reference.sourceTimestamp ? new Date(reference.sourceTimestamp) : undefined, ...relation } });
     }
-  });
+  }, canonicalSeedTransactionOptions);
   return { races: fixture.races.length, moments: fixture.moments.length, sources: fixture.sources.length };
 }

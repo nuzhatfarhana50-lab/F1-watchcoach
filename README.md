@@ -59,11 +59,14 @@ npm run db:migrate:deploy
 
 # Idempotently load the canonical races after migration
 npm run db:seed
+
+# Verify exact canonical counts, relations, provenance, and deletion policies
+npm run db:verify:canonical
 ```
 
 For local migration authoring, `npm run db:migrate:dev` is available, but it must not be pointed at production. Never reset or destructively change a database as part of normal setup. The core migration is applied to `f1-watchcoach-development`; its connection string is managed outside this repository.
 
-Current development-database status: schema and Prisma migration history are verified. Canonical seeding is not yet complete because Prisma timed out while starting the seed's interactive transaction on both pooled and direct Neon endpoints. Both failed attempts were atomic and left the core tables empty. The next investigation is explicit transaction wait/timeout configuration before rerunning the seed.
+Current development-database status: schema, Prisma migration history, canonical seed idempotency, relations, provenance, and deletion policies are verified. Canonical seeds use explicit bounded transaction limits to accommodate remote Neon startup and write latency without changing application-wide transaction behavior.
 
 Rollback is forward-only: if an applied core migration needs correction, create and review a compensating migration rather than resetting the database.
 
