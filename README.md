@@ -2,7 +2,7 @@
 
 F1 Watchcoach is a race-first learning application that turns real Formula 1 moments into lasting understanding.
 
-Phases 0–5 are complete. The domain, timing, learning-content, AI-generation, embedding, and personal-learning persistence groups are live-verified on the dedicated Neon development project. Normalized provider adapters, public Watch → Learn → Connect journeys, grounded AI workflows, and optional authenticated learning memory are implemented, while deterministic fixtures keep local development and CI independent of hosted services.
+Phases 0–7 are complete. The domain, timing, learning-content, AI-generation, embedding, and personal-learning persistence groups are live-verified on the dedicated Neon development project. Normalized provider adapters, public Watch → Learn → Connect journeys, grounded AI workflows, optional authenticated learning memory, replayable live ingestion, observability, and release documentation are implemented, while deterministic fixtures keep local development and CI independent of hosted services.
 
 ## Local development
 
@@ -39,6 +39,14 @@ Deterministic evaluations enforce schema/ID resolution, zero golden-set contradi
 LIVE_OPENAI_EVALS=1 OPENAI_API_KEY=... npm run eval:live
 ```
 
+The complete deterministic release gate is:
+
+```bash
+npm run release:check
+```
+
+This runs `verify` and all deterministic evaluations. Live provider/model checks remain opt-in so a clean checkout does not need hosted credentials.
+
 ## Architecture
 
 The application follows contract-first boundaries:
@@ -60,6 +68,8 @@ Public routes currently include:
 - `/races` for the fixture-backed race library.
 - `/races/[season]/[round]` for race context and structured moment previews.
 - `/races/[season]/[round]/moments/[moment]` for evidence, attributed media, explanation, concept teaching, a verified related moment, and source tracing.
+- `/learning` for authenticated race resumption and teaching preferences.
+- `/live/[sessionKey]` for read-only normalized live state.
 
 The pages render on the server and include explicit loading, empty, unsupported-season, provider-unavailable, not-found, and application-error states.
 
@@ -130,7 +140,7 @@ npm run db:seed
 npm run db:verify:canonical
 ```
 
-For local migration authoring, `npm run db:migrate:dev` is available, but it must not be pointed at production. Never reset or destructively change a database as part of normal setup. All Phase 1 migrations are applied to `f1-watchcoach-development`; its connection string is managed outside this repository.
+For local migration authoring, `npm run db:migrate:dev` is available, but it must not be pointed at production. Never reset or destructively change a database as part of normal setup. All listed migrations are applied to `f1-watchcoach-development`; its connection string is managed outside this repository.
 
 Current development-database status: schema, Prisma migration history, canonical seed idempotency, relations, provenance, and deletion policies are verified. Canonical seeds use explicit bounded transaction limits to accommodate remote Neon startup and write latency without changing application-wide transaction behavior.
 
@@ -155,6 +165,19 @@ Copy `.env.example` to `.env.local`. Current variables are:
 
 Do not commit `.env.local` or credentials.
 
+Production environment matrix:
+
+| Capability | Required variables | Preview | Production |
+| --- | --- | --- | --- |
+| Public fixture learning | `LOG_LEVEL` only | Required baseline | Required baseline |
+| PostgreSQL persistence | `DATABASE_URL` | Development/preview branch | Production branch only after reviewed migrations |
+| Grounded OpenAI | `OPENAI_API_KEY`, model variables, `AI_WORKFLOW_SECRET` | Optional smoke environment | Required to enable generated explanations |
+| Personal memory | Clerk key pair + `DATABASE_URL` | Use Clerk test instance | Use Clerk production instance |
+| Live state | Redis pair + `INGESTION_SECRET` | Optional replay/smoke | Required for shared live state |
+| Scheduled ingestion | `CRON_SECRET`, `LIVE_SESSION_KEY` | Cron does not run | Set only during intended live sessions |
+
+Optional pairs are validated together at startup. Configuration failures report variable names, never values.
+
 The current Prisma CLI transitively includes `deepmerge-ts@7.1.5`, which npm flags for recursive-input stack exhaustion. It is reached through Prisma's build-time configuration path; npm's proposed automatic fix is a breaking Prisma downgrade, so it is not applied. Recheck this advisory when Prisma publishes a compatible update.
 
 ## Fixture and provenance rules
@@ -162,6 +185,63 @@ The current Prisma CLI transitively includes `deepmerge-ts@7.1.5`, which npm fla
 Deterministic fixtures live under `src/lib/f1/fixtures`. Every factual fixture object, moment, evidence item, explanation, connection, and media reference must identify at least one source. Official embeds and links are stored as metadata; protected F1 footage is never downloaded or rehosted.
 
 The in-memory repository is the default deterministic adapter for tests and CI. The Prisma seed is designed to be rerunnable without duplicating core records, timing evidence, learning content, source relationships, or external references.
+
+The release regression set covers dry strategy, mixed weather, Safety Car/red flag, and incident-heavy timelines. These reduced replay fixtures test detector behavior and are not presented as full race records.
+
+## Media rights
+
+Store media references and attribution, not protected race binaries. Use official/publicly embeddable Formula 1, FIA, team, driver, YouTube, Wikimedia, or otherwise licensed sources. Never download or rehost protected footage, bypass platform restrictions, remove attribution, or use Vercel Blob as a rights workaround. If an embed becomes unavailable, show the explicit media-unavailable state while preserving sourced structured evidence.
+
+## Observability and diagnostics
+
+Critical API routes emit structured start/completion/failure logs containing route, request ID, outcome, status, and duration. Secret-like keys are redacted by the logger. Vercel Web Analytics and Speed Insights are mounted in the root layout, and server instrumentation records runtime/environment startup without credentials.
+
+Use the Vercel deployment Logs tab for runtime failures and the Analytics/Speed Insights dashboards for route performance. On Pro/Enterprise, configure a signed Vercel Drain for centralized logs/traces; the repository does not create an external drain automatically. Before production promotion, verify provider failures, Workflow retries, Redis availability, database errors, and p95 route latency in the dashboard.
+
+## Deployment
+
+Deployment is intentionally not automatic from this repository. GitHub Actions runs the same deterministic `npm run verify` gate on pushes and pull requests. A safe Vercel release sequence is:
+
+1. Create/link the Vercel project and provision preview environment variables from the matrix above.
+2. Apply reviewed Prisma migrations to the intended preview database, then run the idempotent seed and canonical verification.
+3. Run `npm run release:check` locally and in CI.
+4. Let Vercel create a preview deployment and exercise anonymous learning, Clerk persistence, personalization, the secured ingestion boundary, and recorded live replay.
+5. Confirm Web Analytics/Speed Insights and structured runtime logs are receiving data.
+6. Apply the same reviewed migrations to the intended production database.
+7. Promote the already verified preview artifact only with explicit deployment approval.
+8. Scan production runtime errors immediately after promotion; roll back the alias if the release gate regresses.
+
+The five-minute cron in `vercel.json` needs Vercel Pro. Disable or change it for Hobby. Never place deployment tokens, Vercel project metadata secrets, database URLs, or provider keys in source control.
+
+## Troubleshooting
+
+- **Environment validation fails:** compare `.env.local` with `.env.example`; Clerk and Redis values must be supplied as complete pairs, and workflow/cron secrets must meet the documented length.
+- **Database operations say `DATABASE_URL` is required:** public fixture browsing still works; configure the intended local/Neon connection only for persistence, migration, or seed commands.
+- **A migration is reported as pending after manual Neon promotion:** compare the SQL checksum with `_prisma_migrations`; never reset the database to repair ledger drift.
+- **Live timing is unavailable:** verify `LIVE_SESSION_KEY`, Redis connectivity, and a recent successful ingestion Workflow. An expired checkpoint is labeled stale; cache loss never falls through to misleading empty data.
+- **An ingestion call returns 401/429/503:** check the bearer secret, bounded trigger rate, and Workflow/provider runtime logs respectively.
+- **AI falls back to curated content:** inspect source sufficiency, real-ID resolution, model configuration, and AI validation logs. The fallback is deliberate when grounding is inadequate.
+- **Clerk sign-in works but saving fails:** verify `DATABASE_URL`, the Phase 5 migration, and that both Clerk keys belong to the same instance. Domain learning data belongs in PostgreSQL, not Clerk metadata.
+- **Playwright cannot find Chromium:** run `npx playwright install chromium`, then retry `npm run test:e2e`.
+- **`npm audit` reports `deepmerge-ts`:** this is the documented Prisma CLI/config transitive advisory; do not apply npm's breaking forced downgrade. Re-evaluate when a compatible Prisma release is available.
+
+## Command reference
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start local Next.js development |
+| `npm run lint` | Enforce ESLint with zero warnings |
+| `npm run typecheck` | Run strict TypeScript checking |
+| `npm test` | Run deterministic unit/component/schema tests |
+| `npm run test:e2e` | Run Playwright journeys and visual baselines |
+| `npm run build` | Generate Prisma and build the production application/Workflows |
+| `npm run verify` | Run the shared local/CI quality gate |
+| `npm run eval` | Run deterministic grounding/retrieval/detection evaluations |
+| `npm run release:check` | Run the full deterministic release gate |
+| `npm run test:integration:live` | Run opt-in live F1 provider smoke tests |
+| `npm run eval:live` | Run the opt-in live OpenAI evaluation |
+| `npm run db:seed` | Idempotently seed canonical sourced records |
+| `npm run db:verify:canonical` | Verify canonical database counts and invariants |
 
 ## Product loop
 
@@ -179,4 +259,4 @@ WHAT SHOULD THE USER NOTICE NEXT TIME?
 SAVE WHAT THE USER LEARNED
 ```
 
-See `AGENTS.md` for the product, architecture, safety, media-rights, and implementation rules.
+See `AGENTS.md` for the product, architecture, safety, media-rights, implementation rules, and current build ledger.

@@ -63,6 +63,10 @@ test("anonymous learning remains complete when authentication is not configured"
   await expect(page.getByLabel("Saving availability")).toContainText("Public learning is ready");
   await page.goto("/sign-in");
   await expect(page.getByRole("status")).toHaveText("Authentication is not configured in this environment.");
+  await page.goto("/learning");
+  await expect(page.getByRole("heading", { name: "Learning memory unavailable" })).toBeVisible();
+  await page.getByRole("link", { name: "Browse races" }).click();
+  await expect(page.getByRole("heading", { name: "Start with a race you watched." })).toBeVisible();
 });
 
 test("internal AI workflow trigger is unavailable without server configuration", async ({ request }) => {

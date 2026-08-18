@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { ClerkProvider } from "@clerk/nextjs";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import { isClerkConfigured } from "@/lib/auth/configuration";
 import "./globals.css";
@@ -22,6 +24,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           Skip to content
         </a>
         {isClerkConfigured() ? <ClerkProvider>{content}</ClerkProvider> : content}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

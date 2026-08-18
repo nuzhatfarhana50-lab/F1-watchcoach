@@ -21,8 +21,8 @@ export const learningPreferencesInputSchema = z.object({
   explanationDepth: z.enum(["BEGINNER", "STANDARD", "DETAILED"]),
   learningStyle: z.enum(["BALANCED", "VISUAL", "TECHNICAL"]),
   interests: z.array(z.string().trim().min(1).max(80)).max(12),
-  driverIds: z.array(uuid).max(8),
-  teamIds: z.array(uuid).max(8),
+  driverIds: z.array(uuid).max(8).optional(),
+  teamIds: z.array(uuid).max(8).optional(),
 });
 
 export type RaceProgressInput = z.infer<typeof raceProgressInputSchema>;

@@ -248,6 +248,11 @@ a {
 
 .save-prompt button:disabled { cursor: wait; opacity: 0.6; }
 
+.preferences-form { display: grid; gap: 1rem; min-width: min(100%, 360px); }
+.preferences-form label { display: grid; gap: 0.45rem; color: var(--muted); font-size: 0.82rem; }
+.preferences-form input, .preferences-form select { border: 1px solid var(--line); border-radius: 0.4rem; background: var(--surface); color: var(--text); padding: 0.7rem; font: inherit; }
+.preferences-form button { justify-self: start; border: 1px solid rgb(255 77 61 / 40%); border-radius: 0.4rem; background: var(--accent-soft); color: #ff8b80; padding: 0.65rem 0.85rem; font: inherit; font-weight: 650; }
+
 @media (max-width: 720px) {
   .auth-shell { grid-template-columns: 1fr; gap: 2rem; padding: 3rem 0; }
 }

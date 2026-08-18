@@ -11,6 +11,7 @@ export function SiteHeader() {
       <nav className="primary-nav" aria-label="Primary navigation">
         <Link href="/races">Races</Link>
         {authenticationAvailable ? <Link href="/sign-in">Sign in</Link> : null}
+        {authenticationAvailable ? <Link href="/learning">Learning</Link> : null}
         <span className="phase-badge">Watch · Learn · Connect</span>
       </nav>
     </header>

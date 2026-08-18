@@ -22,12 +22,15 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:verify:canonical": "tsx prisma/verifyCanonicalSeed.ts",
-    "verify": "npm run db:validate && npm run db:generate && npm run lint && npm run typecheck && npm run test && npm run build && npm run test:e2e"
+    "verify": "npm run db:validate && npm run db:generate && npm run lint && npm run typecheck && npm run test && npm run build && npm run test:e2e",
+    "release:check": "npm run verify && npm run eval"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.7.8",
     "@prisma/adapter-pg": "7.9.1",
     "@prisma/client": "7.9.1",
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "dotenv": "^17.4.2",
     "next": "16.3.1",
     "pg": "^8.23.0",

@@ -11,9 +11,13 @@ import { ProviderUnavailable, UnsupportedSeason } from "@/app/_components/librar
 import { SiteHeader } from "@/app/_components/site-header";
 import { SaveLearningControl } from "@/app/_components/save-learning-control";
 import { isClerkConfigured } from "@/lib/auth/configuration";
+import { identityProvider } from "@/lib/auth/identity";
 import { getRaceLibraryService } from "@/lib/f1/application/composition";
+import type { MomentDetailReadModel } from "@/lib/f1/application/raceLibraryService";
 import { isProviderFailure } from "@/lib/f1/providers/errors";
 import { logger } from "@/lib/observability/logger";
+import { getLearningService } from "@/lib/learning/composition";
+import { personalizeExplanation } from "@/lib/learning/personalizeExplanation";
 
 const parametersSchema = z.object({
   season: z.coerce.number().int().min(1950).max(2200),
@@ -22,6 +26,7 @@ const parametersSchema = z.object({
 });
 
 type MomentPageProps = { params: Promise<{ season: string; round: string; moment: string }> };
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: MomentPageProps): Promise<Metadata> {
   const parsed = parametersSchema.safeParse(await params);
@@ -30,15 +35,6 @@ export async function generateMetadata({ params }: MomentPageProps): Promise<Met
   return result.kind === "found"
     ? { title: result.moment.title, description: result.moment.summary }
     : { title: "Moment not found" };
-}
-
-export async function generateStaticParams() {
-  const service = await getRaceLibraryService();
-  const races = await service.listRaces();
-  const details = await Promise.all(races.map((race) => service.getRace(race.season, race.round)));
-  return details.flatMap((result) => result.kind === "found"
-    ? result.race.moments.map((moment) => ({ season: String(result.race.season), round: String(result.race.round), moment: moment.slug }))
-    : []);
 }
 
 export default async function MomentPage({ params }: MomentPageProps) {
@@ -59,6 +55,7 @@ export default async function MomentPage({ params }: MomentPageProps) {
   if (result.kind === "notFound") notFound();
 
   const moment = result.moment;
+  const personalizedExplanation = await personalizeForCurrentUser(moment);
   return (
     <PageFrame>
       <nav className="breadcrumbs" aria-label="Breadcrumb">
@@ -77,7 +74,7 @@ export default async function MomentPage({ params }: MomentPageProps) {
       </header>
       <MomentMedia media={moment.media} />
       <MomentEvidence moment={moment} />
-      <MomentLearning moment={moment} />
+      <MomentLearning moment={{ ...moment, explanation: personalizedExplanation }} />
       <MomentConnections connections={moment.connections} />
       <section className="sources-section" aria-labelledby="sources-title">
         <div><p className="section-label">Sources</p><h2 id="sources-title">Trace the claims.</h2></div>
@@ -95,6 +92,21 @@ export default async function MomentPage({ params }: MomentPageProps) {
       )}
     </PageFrame>
   );
+}
+
+async function personalizeForCurrentUser(moment: MomentDetailReadModel) {
+  if (!isClerkConfigured()) return moment.explanation;
+  try {
+    const externalAuthId = await identityProvider.currentExternalUserId();
+    if (!externalAuthId) return moment.explanation;
+    const service = getLearningService();
+    const user = await service.resolveUser(externalAuthId);
+    const snapshot = await service.getSnapshot(user.id);
+    const states = moment.concepts.map((concept) => snapshot.conceptStates[concept.id] ?? "UNSEEN");
+    return personalizeExplanation(moment.explanation, states, snapshot.user.explanationDepth);
+  } catch {
+    return moment.explanation;
+  }
 }
 
 function PageFrame({ children }: { children: React.ReactNode }) {

@@ -92,24 +92,29 @@ export class PrismaLearningRepository implements LearningRepository {
 
   async updatePreferences(userId: string, input: LearningPreferencesInput): Promise<LearningUser> {
     const database = getDatabase();
-    const [user] = await database.$transaction([
-      database.user.update({
+    const user = await database.$transaction(async (transaction) => {
+      const updated = await transaction.user.update({
         where: { id: userId },
         data: { explanationDepth: input.explanationDepth, learningStyle: input.learningStyle },
-      }),
-      database.userInterest.deleteMany({ where: { userId } }),
-      database.userDriverPreference.deleteMany({ where: { userId } }),
-      database.userTeamPreference.deleteMany({ where: { userId } }),
-      database.userInterest.createMany({
+      });
+      await transaction.userInterest.deleteMany({ where: { userId } });
+      await transaction.userInterest.createMany({
         data: [...new Set(input.interests)].map((topic) => ({ userId, topic })),
-      }),
-      database.userDriverPreference.createMany({
-        data: [...new Set(input.driverIds)].map((driverId) => ({ userId, driverId })),
-      }),
-      database.userTeamPreference.createMany({
-        data: [...new Set(input.teamIds)].map((teamId) => ({ userId, teamId })),
-      }),
-    ]);
+      });
+      if (input.driverIds) {
+        await transaction.userDriverPreference.deleteMany({ where: { userId } });
+        await transaction.userDriverPreference.createMany({
+          data: [...new Set(input.driverIds)].map((driverId) => ({ userId, driverId })),
+        });
+      }
+      if (input.teamIds) {
+        await transaction.userTeamPreference.deleteMany({ where: { userId } });
+        await transaction.userTeamPreference.createMany({
+          data: [...new Set(input.teamIds)].map((teamId) => ({ userId, teamId })),
+        });
+      }
+      return updated;
+    });
     return toUser(user);
   }
 
