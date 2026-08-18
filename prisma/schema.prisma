@@ -162,6 +162,24 @@ enum MomentConnectionReason {
   TEAM_HISTORY
 }
 
+enum AiGenerationKind {
+  EXPLANATION
+  CONCEPT_CLASSIFICATION
+  CONNECTION_DISCOVERY
+}
+
+enum AiGenerationStatus {
+  VALIDATED
+  FALLBACK
+  REJECTED
+}
+
+enum EmbeddingTargetType {
+  RACE_MOMENT
+  CONCEPT
+  EXPLANATION
+}
+
 model Season {
   id                    String                  @id @default(uuid()) @db.Uuid
   year                  Int                     @unique
@@ -347,6 +365,8 @@ model RaceMoment {
   outgoingConnections MomentConnection[]      @relation("ConnectionSourceMoment")
   incomingConnections MomentConnection[]      @relation("ConnectionTargetMoment")
   externalReferences  ExternalDataReference[]
+  aiGenerations       AiGeneration[]
+  embeddings          EmbeddingRecord[]
 
   @@unique([raceId, slug])
   @@unique([raceId, sequence])
@@ -399,6 +419,7 @@ model Source {
   media                 MediaSource[]
   momentConnections     MomentConnectionSource[]
   externalReferences    ExternalDataReference[]
+  aiGenerations         AiGenerationSource[]
 }
 
 model RaceMomentSource {
@@ -422,6 +443,7 @@ model Concept {
   moments      RaceMomentConcept[]
   explanations ExplanationConcept[]
   sources      ConceptSource[]
+  embeddings   EmbeddingRecord[]
 
   @@index([category, name])
 }
@@ -459,8 +481,60 @@ model Explanation {
   raceMoment    RaceMoment           @relation(fields: [raceMomentId], references: [id], onDelete: Cascade)
   concepts      ExplanationConcept[]
   sources       ExplanationSource[]
+  embeddings    EmbeddingRecord[]
 
   @@unique([raceMomentId, slug])
+}
+
+model AiGeneration {
+  id               String             @id @default(uuid()) @db.Uuid
+  raceMomentId     String             @db.Uuid
+  kind             AiGenerationKind
+  status           AiGenerationStatus
+  idempotencyKey   String             @unique
+  providerResponseId String?
+  model            String
+  promptVersion    String
+  contextReference String
+  output           Json
+  validationStatus String
+  createdAt        DateTime           @default(now()) @db.Timestamptz(3)
+  raceMoment       RaceMoment         @relation(fields: [raceMomentId], references: [id], onDelete: Cascade)
+  sources          AiGenerationSource[]
+
+  @@index([raceMomentId, kind, createdAt])
+  @@index([model, promptVersion])
+}
+
+model AiGenerationSource {
+  aiGenerationId String       @db.Uuid
+  sourceId       String       @db.Uuid
+  aiGeneration   AiGeneration @relation(fields: [aiGenerationId], references: [id], onDelete: Cascade)
+  source         Source       @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@id([aiGenerationId, sourceId])
+  @@index([sourceId])
+}
+
+model EmbeddingRecord {
+  id            String              @id @default(uuid()) @db.Uuid
+  targetType    EmbeddingTargetType
+  raceMomentId  String?             @db.Uuid
+  conceptId     String?             @db.Uuid
+  explanationId String?             @db.Uuid
+  model         String
+  dimensions    Int
+  contentHash   String
+  embedding     Unsupported("vector(1536)")
+  createdAt     DateTime            @default(now()) @db.Timestamptz(3)
+  raceMoment    RaceMoment?         @relation(fields: [raceMomentId], references: [id], onDelete: Cascade)
+  concept       Concept?            @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  explanation   Explanation?        @relation(fields: [explanationId], references: [id], onDelete: Cascade)
+
+  @@index([raceMomentId])
+  @@index([conceptId])
+  @@index([explanationId])
+  @@index([targetType, model])
 }
 
 model ExplanationConcept {

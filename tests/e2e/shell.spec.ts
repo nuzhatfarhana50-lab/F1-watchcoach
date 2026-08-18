@@ -56,3 +56,11 @@ test("moment detail preserves landmarks and keyboard focus at mobile width", asy
   await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
   await expect(page.getByRole("heading", { name: "Read the race before the terminology." })).toBeVisible();
 });
+
+test("internal AI workflow trigger is unavailable without server configuration", async ({ request }) => {
+  const response = await request.post("/api/internal/ai/explanations", {
+    data: { momentId: "80000000-0000-4000-8000-000000000001" },
+  });
+  expect(response.status()).toBe(503);
+  await expect(response.json()).resolves.toEqual({ error: "AI workflow is not configured" });
+});

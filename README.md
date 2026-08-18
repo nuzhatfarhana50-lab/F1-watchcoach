@@ -2,7 +2,7 @@
 
 F1 Watchcoach is a race-first learning application that turns real Formula 1 moments into lasting understanding.
 
-Phases 0–3 are complete. The core, timing-evidence, and learning-content persistence groups are live-verified on the dedicated Neon development project. Normalized provider adapters, the public race library, and the canonical Watch → Learn → Connect experience are implemented, while deterministic fixtures keep local development and CI independent of hosted services.
+Phases 0–4 are complete. The domain, timing, learning-content, AI-generation, and embedding persistence groups are live-verified on the dedicated Neon development project. Normalized provider adapters, the public race library, the canonical Watch → Learn → Connect experience, and grounded AI service/workflow boundaries are implemented, while deterministic fixtures keep local development and CI independent of hosted services.
 
 ## Local development
 
@@ -33,6 +33,12 @@ Playwright also verifies the canonical race → moment → concept → connected
 npm run eval
 ```
 
+Deterministic evaluations enforce schema/ID resolution, zero golden-set contradictions, source support, beginner clarity, Recall@5, connection integrity, and media-rights rules. A live model call is deliberately separate:
+
+```bash
+LIVE_OPENAI_EVALS=1 OPENAI_API_KEY=... npm run eval:live
+```
+
 ## Architecture
 
 The application follows contract-first boundaries:
@@ -58,6 +64,16 @@ Public routes currently include:
 The pages render on the server and include explicit loading, empty, unsupported-season, provider-unavailable, not-found, and application-error states.
 
 Moment detail is intentionally evidence-first. Missing telemetry is labeled, partial evidence never masquerades as a complete record, media opens only at the attributed rights holder, and related moments resolve from real repository IDs. Browsing remains public; the saving prompt is non-interactive until authenticated learning memory is implemented in Phase 5.
+
+## Grounded AI and workflows
+
+OpenAI access is centralized under `src/lib/ai`. Exact moment, concept, source, and connection records are retrieved first. Semantic candidates may be ranked only after structured filtering, and every generated ID is resolved back to an allowed application record. Invalid, unavailable, or invented output falls back to curated grounded content. Repeated stable generations use an idempotency key and cache instead of rerunning on render.
+
+The Responses API requests strict JSON-schema output and Zod validates it again at the application boundary. `text-embedding-3-small` vectors use the approved 1536-dimension pgvector column. Model names remain configurable.
+
+Vercel Workflow compiles explanation and embedding work into durable steps. The internal trigger is `POST /api/internal/ai/explanations`, requires `AI_WORKFLOW_SECRET`, validates a moment UUID, and only enqueues work. It is unavailable by default and never runs during page rendering or deterministic CI.
+
+Workflow 4.8.3 currently brings transitive versions with published nanoid/undici advisories. Scoped npm overrides pin patched releases, and the production build plus deterministic suite verify compatibility. The remaining production audit finding is the documented Prisma CLI/config `deepmerge-ts` advisory.
 
 ## Provider boundaries
 
@@ -87,6 +103,7 @@ prisma/migrations/20260817173000_phase1_core/migration.sql
 prisma/migrations/20260818193000_phase1_timing_evidence_types/migration.sql
 prisma/migrations/20260818193100_phase1_timing_evidence/migration.sql
 prisma/migrations/20260818195500_phase1_learning_content/migration.sql
+prisma/migrations/20260818221000_phase4_ai_metadata/migration.sql
 
 # Apply pending migrations only after confirming the target database
 npm run db:migrate:deploy
@@ -110,6 +127,10 @@ Copy `.env.example` to `.env.local`. Current variables are:
 
 - `DATABASE_URL`: PostgreSQL connection string, required only for migration, seed, and database-backed application operations.
 - `LOG_LEVEL`: optional structured log threshold (`debug`, `info`, `warn`, or `error`).
+- `OPENAI_API_KEY`: optional; required only for intentional live generation/evaluation.
+- `OPENAI_GENERATION_MODEL`: optional, defaults to `gpt-5-mini`.
+- `OPENAI_EMBEDDING_MODEL`: optional, defaults to `text-embedding-3-small`.
+- `AI_WORKFLOW_SECRET`: optional 32+ character bearer secret for the internal workflow trigger.
 
 Do not commit `.env.local` or credentials.
 

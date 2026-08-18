@@ -1,10 +1,15 @@
 import { z } from "zod";
 
 const logLevels = ["debug", "info", "warn", "error"] as const;
+const optionalSecret = z.preprocess((value) => value === "" ? undefined : value, z.string().min(20).optional());
 
 export const serverEnvironmentSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]),
   LOG_LEVEL: z.enum(logLevels).default("info"),
+  OPENAI_API_KEY: optionalSecret,
+  AI_WORKFLOW_SECRET: z.preprocess((value) => value === "" ? undefined : value, z.string().min(32).optional()),
+  OPENAI_GENERATION_MODEL: z.string().min(1).default("gpt-5-mini"),
+  OPENAI_EMBEDDING_MODEL: z.string().min(1).default("text-embedding-3-small"),
 });
 
 export type ServerEnvironment = z.infer<typeof serverEnvironmentSchema>;

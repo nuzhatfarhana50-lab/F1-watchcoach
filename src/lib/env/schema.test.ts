@@ -9,7 +9,12 @@ describe("parseServerEnvironment", () => {
   it("applies a safe default log level", () => {
     expect(
       parseServerEnvironment({ NODE_ENV: "test", LOG_LEVEL: undefined }),
-    ).toEqual({ NODE_ENV: "test", LOG_LEVEL: "info" });
+    ).toEqual({
+      NODE_ENV: "test",
+      LOG_LEVEL: "info",
+      OPENAI_GENERATION_MODEL: "gpt-5-mini",
+      OPENAI_EMBEDDING_MODEL: "text-embedding-3-small",
+    });
   });
 
   it("reports invalid keys without including their values", () => {

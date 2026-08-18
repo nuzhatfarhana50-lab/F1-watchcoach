@@ -47,3 +47,4 @@ next-env.d.ts
 
 # generated database client
 /src/generated/prisma/
+/.swc
