@@ -6,6 +6,7 @@ import type {
   driverSchema,
   driverTeamMembershipSchema,
   externalDataReferenceSchema,
+  explanationSchema,
   championshipStandingSchema,
   grandPrixSchema,
   mediaReferenceSchema,
@@ -47,6 +48,7 @@ export type Result = z.infer<typeof resultSchema>;
 export type ChampionshipStanding = z.infer<typeof championshipStandingSchema>;
 export type RaceEvidence = z.infer<typeof raceEvidenceSchema>;
 export type ConceptReference = z.infer<typeof conceptReferenceSchema>;
+export type Explanation = z.infer<typeof explanationSchema>;
 export type MomentConnection = z.infer<typeof momentConnectionSchema>;
 export type MediaReference = z.infer<typeof mediaReferenceSchema>;
 export type RaceMoment = z.infer<typeof raceMomentSchema>;

@@ -56,6 +56,38 @@ export function validateFixtureCollection(input: unknown): RaceFixtureCollection
   const raceControlEvents = indexById(fixture.raceControlEvents, "raceControlEvent");
   const results = indexById(fixture.results, "result");
   const championshipStandings = indexById(fixture.championshipStandings, "championshipStanding");
+  const explanations = indexById(fixture.moments.map((moment) => moment.explanation), "explanation");
+  const connections = indexById(fixture.moments.flatMap((moment) => moment.connections), "momentConnection");
+  const mediaItems = indexById(fixture.moments.flatMap((moment) => moment.media), "media");
+  const concepts = new Map<string, (typeof fixture.moments)[number]["concepts"][number]>();
+
+  for (const concept of fixture.moments.flatMap((moment) => moment.concepts)) {
+    const existing = concepts.get(concept.id);
+    if (existing && JSON.stringify(existing) !== JSON.stringify(concept)) {
+      throw new DomainInvariantError("mismatchedRelationship", `Concept ${concept.id} has conflicting definitions`, {
+        conceptId: concept.id,
+      });
+    }
+    concepts.set(concept.id, concept);
+  }
+
+  const mediaUrls = new Set<string>();
+  const mediaProviderKeys = new Set<string>();
+  for (const media of mediaItems.values()) {
+    if (mediaUrls.has(media.url)) {
+      throw new DomainInvariantError("duplicateId", `Duplicate media URL: ${media.url}`, { url: media.url });
+    }
+    mediaUrls.add(media.url);
+    if (media.providerId) {
+      const providerKey = `${media.provider}:${media.providerId}`;
+      if (mediaProviderKeys.has(providerKey)) {
+        throw new DomainInvariantError("duplicateId", `Duplicate media provider reference: ${providerKey}`, {
+          providerKey,
+        });
+      }
+      mediaProviderKeys.add(providerKey);
+    }
+  }
 
   const sourcedObjects = [
     ...fixture.seasons,
@@ -71,6 +103,9 @@ export function validateFixtureCollection(input: unknown): RaceFixtureCollection
   ];
   for (const item of sourcedObjects) {
     for (const sourceId of item.sourceIds) requireReference(sources, sourceId, "source");
+  }
+  for (const concept of concepts.values()) {
+    for (const sourceId of concept.sourceIds) requireReference(sources, sourceId, "concept.source");
   }
 
   for (const grandPrix of fixture.grandsPrix) {
@@ -173,12 +208,20 @@ export function validateFixtureCollection(input: unknown): RaceFixtureCollection
     for (const sourceId of moment.explanation.sourceIds) requireReference(sources, sourceId, "explanation.source");
     for (const connection of moment.connections) {
       requireReference(moments, connection.targetMomentId, "connection.targetMoment");
+      if (connection.targetMomentId === moment.id) {
+        throw new DomainInvariantError("mismatchedRelationship", "Moment connection cannot target itself", {
+          connectionId: connection.id,
+        });
+      }
       for (const sourceId of connection.sourceIds) requireReference(sources, sourceId, "connection.source");
     }
     for (const media of moment.media) {
       for (const sourceId of media.sourceIds) requireReference(sources, sourceId, "media.source");
     }
   }
+
+  void explanations;
+  void connections;
 
   const entityIndexes = { season: seasons, circuit: circuits, grandPrix: grandsPrix, session: sessions, race: races, driver: drivers, team: teams, raceMoment: moments, lap: laps, position: positions, pitStop: pitStops, tyreStint: tyreStints, raceControlEvent: raceControlEvents, result: results, championshipStanding: championshipStandings };
   const externalKeys = new Set<string>();

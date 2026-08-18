@@ -12,6 +12,10 @@ describe("validateFixtureCollection", () => {
     expect(fixture.moments).toHaveLength(3);
     expect(fixture.pitStops).toHaveLength(4);
     expect(fixture.results).toHaveLength(3);
+    expect(new Set(fixture.moments.flatMap((moment) => moment.concepts).map((concept) => concept.id)).size).toBe(2);
+    expect(fixture.moments.map((moment) => moment.explanation)).toHaveLength(3);
+    expect(fixture.moments.flatMap((moment) => moment.media)).toHaveLength(3);
+    expect(fixture.moments.flatMap((moment) => moment.connections)).toHaveLength(2);
     expect(fixture.moments.every((moment) => moment.sourceIds.length > 0)).toBe(true);
     expect(fixture.moments.flatMap((moment) => moment.evidence).every((evidence) => evidence.sourceIds.length > 0)).toBe(true);
   });
@@ -57,5 +61,23 @@ describe("validateFixtureCollection", () => {
     });
 
     expect(() => validateFixtureCollection(fixture)).toThrowError(expect.objectContaining({ code: "mismatchedRelationship" }));
+  });
+
+  it("rejects a self-referential moment connection", () => {
+    const fixture = structuredClone(canonicalRaceFixtures);
+    fixture.moments[0].connections[0].targetMomentId = fixture.moments[0].id;
+
+    expect(() => validateFixtureCollection(fixture)).toThrowError(
+      expect.objectContaining({ code: "mismatchedRelationship" }),
+    );
+  });
+
+  it("rejects conflicting definitions for the same concept", () => {
+    const fixture = structuredClone(canonicalRaceFixtures);
+    fixture.moments[2].concepts[0].definition = "A conflicting definition";
+
+    expect(() => validateFixtureCollection(fixture)).toThrowError(
+      expect.objectContaining({ code: "mismatchedRelationship" }),
+    );
   });
 });

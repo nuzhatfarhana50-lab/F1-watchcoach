@@ -1,5 +1,21 @@
 import type { PrismaClient } from "@/generated/prisma/client";
-import { ExternalResourceType, ParticipantRole, RaceControlCategory, RaceMomentStatus, RaceMomentType, RaceStatus, SessionType, SourceKind, SourceProvider, StandingKind, TyreCompound } from "@/generated/prisma/enums";
+import {
+  ConceptCategory,
+  ExternalResourceType,
+  MediaKind,
+  MediaProvider,
+  MomentConnectionReason,
+  ParticipantRole,
+  RaceControlCategory,
+  RaceMomentStatus,
+  RaceMomentType,
+  RaceStatus,
+  SessionType,
+  SourceKind,
+  SourceProvider,
+  StandingKind,
+  TyreCompound,
+} from "@/generated/prisma/enums";
 import { canonicalRaceFixtures } from "@/lib/f1/fixtures/canonical-races";
 
 const upperSnake = (value: string) => value.replace(/([a-z])([A-Z])/g, "$1_$2").toUpperCase();
@@ -11,9 +27,36 @@ export const canonicalSeedTransactionOptions = {
 
 export async function seedCanonicalFixtures(database: PrismaClient) {
   const fixture = canonicalRaceFixtures;
+  const concepts = [
+    ...new Map(
+      fixture.moments.flatMap((moment) => moment.concepts).map((concept) => [concept.id, concept]),
+    ).values(),
+  ];
   await database.$transaction(async (tx) => {
     for (const source of fixture.sources) {
       await tx.source.upsert({ where: { id: source.id }, update: { provider: SourceProvider[upperSnake(source.provider) as keyof typeof SourceProvider], kind: SourceKind[upperSnake(source.kind) as keyof typeof SourceKind], title: source.title, url: source.url, publishedAt: source.publishedAt ? new Date(source.publishedAt) : null, retrievedAt: new Date(source.retrievedAt) }, create: { id: source.id, provider: SourceProvider[upperSnake(source.provider) as keyof typeof SourceProvider], kind: SourceKind[upperSnake(source.kind) as keyof typeof SourceKind], title: source.title, url: source.url, publishedAt: source.publishedAt ? new Date(source.publishedAt) : undefined, retrievedAt: new Date(source.retrievedAt) } });
+    }
+    for (const concept of concepts) {
+      await tx.concept.upsert({
+        where: { id: concept.id },
+        update: {
+          slug: concept.slug,
+          name: concept.name,
+          category: ConceptCategory[upperSnake(concept.category) as keyof typeof ConceptCategory],
+          definition: concept.definition,
+        },
+        create: {
+          id: concept.id,
+          slug: concept.slug,
+          name: concept.name,
+          category: ConceptCategory[upperSnake(concept.category) as keyof typeof ConceptCategory],
+          definition: concept.definition,
+        },
+      });
+      await tx.conceptSource.deleteMany({ where: { conceptId: concept.id } });
+      await tx.conceptSource.createMany({
+        data: concept.sourceIds.map((sourceId) => ({ conceptId: concept.id, sourceId })),
+      });
     }
     for (const season of fixture.seasons) await tx.season.upsert({ where: { id: season.id }, update: { year: season.year }, create: { id: season.id, year: season.year } });
     for (const circuit of fixture.circuits) await tx.circuit.upsert({ where: { id: circuit.id }, update: { slug: circuit.slug, name: circuit.name, locality: circuit.locality, country: circuit.country, countryCode: circuit.countryCode }, create: { id: circuit.id, slug: circuit.slug, name: circuit.name, locality: circuit.locality, country: circuit.country, countryCode: circuit.countryCode } });
@@ -40,11 +83,123 @@ export async function seedCanonicalFixtures(database: PrismaClient) {
       await tx.raceMomentSource.deleteMany({ where: { raceMomentId: moment.id } });
       await tx.raceMomentSource.createMany({ data: moment.sourceIds.map((sourceId) => ({ raceMomentId: moment.id, sourceId })) });
     }
+    for (const moment of fixture.moments) {
+      await tx.raceMomentConcept.deleteMany({ where: { raceMomentId: moment.id } });
+      await tx.raceMomentConcept.createMany({
+        data: moment.concepts.map((concept) => ({ raceMomentId: moment.id, conceptId: concept.id })),
+      });
+
+      const explanation = moment.explanation;
+      await tx.explanation.upsert({
+        where: { id: explanation.id },
+        update: {
+          raceMomentId: moment.id,
+          slug: explanation.slug,
+          whatHappened: explanation.whatHappened,
+          whyItHappened: explanation.whyItHappened,
+          whyItMatters: explanation.whyItMatters,
+          watchNext: explanation.watchNext,
+        },
+        create: {
+          id: explanation.id,
+          raceMomentId: moment.id,
+          slug: explanation.slug,
+          whatHappened: explanation.whatHappened,
+          whyItHappened: explanation.whyItHappened,
+          whyItMatters: explanation.whyItMatters,
+          watchNext: explanation.watchNext,
+        },
+      });
+      await tx.explanationConcept.deleteMany({ where: { explanationId: explanation.id } });
+      await tx.explanationConcept.createMany({
+        data: explanation.conceptIds.map((conceptId) => ({ explanationId: explanation.id, conceptId })),
+      });
+      await tx.explanationSource.deleteMany({ where: { explanationId: explanation.id } });
+      await tx.explanationSource.createMany({
+        data: explanation.sourceIds.map((sourceId) => ({ explanationId: explanation.id, sourceId })),
+      });
+
+      await tx.raceMomentMedia.deleteMany({ where: { raceMomentId: moment.id } });
+      for (const media of moment.media) {
+        await tx.media.upsert({
+          where: { id: media.id },
+          update: {
+            provider: MediaProvider[upperSnake(media.provider) as keyof typeof MediaProvider],
+            providerId: media.providerId ?? null,
+            kind: MediaKind[upperSnake(media.kind) as keyof typeof MediaKind],
+            title: media.title,
+            url: media.url,
+            embedUrl: media.embedUrl ?? null,
+            startTimestampSeconds: media.startTimestampSeconds ?? null,
+            license: media.license ?? null,
+            attribution: media.attribution,
+          },
+          create: {
+            id: media.id,
+            provider: MediaProvider[upperSnake(media.provider) as keyof typeof MediaProvider],
+            providerId: media.providerId,
+            kind: MediaKind[upperSnake(media.kind) as keyof typeof MediaKind],
+            title: media.title,
+            url: media.url,
+            embedUrl: media.embedUrl,
+            startTimestampSeconds: media.startTimestampSeconds,
+            license: media.license,
+            attribution: media.attribution,
+          },
+        });
+        await tx.mediaSource.deleteMany({ where: { mediaId: media.id } });
+        await tx.mediaSource.createMany({
+          data: media.sourceIds.map((sourceId) => ({ mediaId: media.id, sourceId })),
+        });
+        await tx.raceMomentMedia.create({ data: { raceMomentId: moment.id, mediaId: media.id } });
+      }
+
+      await tx.momentConnection.deleteMany({ where: { sourceMomentId: moment.id } });
+      for (const connection of moment.connections) {
+        await tx.momentConnection.upsert({
+          where: { id: connection.id },
+          update: {
+            sourceMomentId: moment.id,
+            targetMomentId: connection.targetMomentId,
+            reason: MomentConnectionReason[
+              upperSnake(connection.reason) as keyof typeof MomentConnectionReason
+            ],
+            explanation: connection.explanation,
+          },
+          create: {
+            id: connection.id,
+            sourceMomentId: moment.id,
+            targetMomentId: connection.targetMomentId,
+            reason: MomentConnectionReason[
+              upperSnake(connection.reason) as keyof typeof MomentConnectionReason
+            ],
+            explanation: connection.explanation,
+          },
+        });
+        await tx.momentConnectionSource.deleteMany({
+          where: { momentConnectionId: connection.id },
+        });
+        await tx.momentConnectionSource.createMany({
+          data: connection.sourceIds.map((sourceId) => ({
+            momentConnectionId: connection.id,
+            sourceId,
+          })),
+        });
+      }
+    }
     for (const reference of fixture.externalReferences) {
       const entityKey = `${reference.resourceType}Id` as const;
       const relation = { [entityKey]: reference.entityId };
       await tx.externalDataReference.upsert({ where: { id: reference.id }, update: { provider: SourceProvider[upperSnake(reference.provider) as keyof typeof SourceProvider], resourceType: ExternalResourceType[upperSnake(reference.resourceType) as keyof typeof ExternalResourceType], externalId: reference.externalId, sourceId: reference.sourceId, sourceUrl: reference.sourceUrl, fetchedAt: new Date(reference.fetchedAt), sourceTimestamp: reference.sourceTimestamp ? new Date(reference.sourceTimestamp) : null, ...relation }, create: { id: reference.id, provider: SourceProvider[upperSnake(reference.provider) as keyof typeof SourceProvider], resourceType: ExternalResourceType[upperSnake(reference.resourceType) as keyof typeof ExternalResourceType], externalId: reference.externalId, sourceId: reference.sourceId, sourceUrl: reference.sourceUrl, fetchedAt: new Date(reference.fetchedAt), sourceTimestamp: reference.sourceTimestamp ? new Date(reference.sourceTimestamp) : undefined, ...relation } });
     }
   }, canonicalSeedTransactionOptions);
-  return { races: fixture.races.length, moments: fixture.moments.length, sources: fixture.sources.length };
+  return {
+    races: fixture.races.length,
+    moments: fixture.moments.length,
+    sources: fixture.sources.length,
+    concepts: concepts.length,
+    explanations: fixture.moments.length,
+    media: fixture.moments.reduce((count, moment) => count + moment.media.length, 0),
+    connections: fixture.moments.reduce((count, moment) => count + moment.connections.length, 0),
+  };
 }

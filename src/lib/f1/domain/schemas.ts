@@ -281,9 +281,13 @@ export const conceptReferenceSchema = z.object({
   slug: slugSchema,
   name: z.string().min(1),
   category: z.enum(["strategy", "tyres", "racing", "engineering", "regulations"]),
+  definition: z.string().min(1),
+  sourceIds: sourceIdsSchema,
 });
 
 export const explanationSchema = z.object({
+  id: idSchema,
+  slug: slugSchema,
   whatHappened: z.string().min(1),
   whyItHappened: z.string().min(1),
   whyItMatters: z.string().min(1),
@@ -293,6 +297,7 @@ export const explanationSchema = z.object({
 });
 
 export const momentConnectionSchema = z.object({
+  id: idSchema,
   targetMomentId: idSchema,
   reason: z.enum([
     "sameConcept",
@@ -311,6 +316,7 @@ export const momentConnectionSchema = z.object({
 export const mediaReferenceSchema = z.object({
   id: idSchema,
   provider: z.enum(["officialF1", "youtube", "wikimedia", "fia", "team", "driver"]),
+  providerId: z.string().min(1).optional(),
   kind: z.enum(["video", "image", "document"]),
   title: z.string().min(1),
   url: z.string().url(),
