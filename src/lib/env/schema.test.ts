@@ -25,4 +25,11 @@ describe("parseServerEnvironment", () => {
       }),
     ).toThrowError(new EnvironmentConfigurationError(["LOG_LEVEL"]));
   });
+
+  it("requires Clerk keys as a pair without exposing either value", () => {
+    expect(() => parseServerEnvironment({
+      NODE_ENV: "production",
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_configured_value",
+    })).toThrowError(new EnvironmentConfigurationError(["CLERK_SECRET_KEY"]));
+  });
 });

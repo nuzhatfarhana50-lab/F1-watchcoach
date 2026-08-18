@@ -9,6 +9,8 @@ import { MomentLearning } from "@/app/_components/moment-learning";
 import { MomentMedia } from "@/app/_components/moment-media";
 import { ProviderUnavailable, UnsupportedSeason } from "@/app/_components/library-states";
 import { SiteHeader } from "@/app/_components/site-header";
+import { SaveLearningControl } from "@/app/_components/save-learning-control";
+import { isClerkConfigured } from "@/lib/auth/configuration";
 import { getRaceLibraryService } from "@/lib/f1/application/composition";
 import { isProviderFailure } from "@/lib/f1/providers/errors";
 import { logger } from "@/lib/observability/logger";
@@ -81,7 +83,16 @@ export default async function MomentPage({ params }: MomentPageProps) {
         <div><p className="section-label">Sources</p><h2 id="sources-title">Trace the claims.</h2></div>
         <ol>{moment.sources.map((source) => <li key={source.id}><span>{source.provider}</span><a href={source.url} target="_blank" rel="noreferrer">{source.title} <span aria-hidden="true">↗</span></a></li>)}</ol>
       </section>
-      <aside className="save-prompt" aria-label="Saving availability"><div><strong>Want to remember this concept?</strong><p>Personal learning memory arrives in Phase 5. Browsing remains public.</p></div><span aria-disabled="true">Saving not yet available</span></aside>
+      {isClerkConfigured() && moment.concepts[0] ? (
+        <SaveLearningControl
+          raceId={moment.race.id}
+          momentId={moment.id}
+          conceptId={moment.concepts[0].id}
+          returnPath={`/races/${parsed.data.season}/${parsed.data.round}/moments/${parsed.data.moment}`}
+        />
+      ) : (
+        <aside className="save-prompt" aria-label="Saving availability"><div><strong>Want to remember this concept?</strong><p>Public learning is ready. Configure Clerk to save personal progress.</p></div><span aria-disabled="true">Saving unavailable</span></aside>
+      )}
     </PageFrame>
   );
 }

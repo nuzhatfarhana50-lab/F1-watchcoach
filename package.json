@@ -25,6 +25,7 @@
     "verify": "npm run db:validate && npm run db:generate && npm run lint && npm run typecheck && npm run test && npm run build && npm run test:e2e"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.7.8",
     "@prisma/adapter-pg": "7.9.1",
     "@prisma/client": "7.9.1",
     "dotenv": "^17.4.2",

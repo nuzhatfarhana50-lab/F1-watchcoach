@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { ClerkProvider } from "@clerk/nextjs";
+
+import { isClerkConfigured } from "@/lib/auth/configuration";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -11,13 +14,14 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
+  const content = <>{children}</>;
   return (
     <html lang="en" className="dark">
       <body>
         <a className="skip-link" href="#main-content">
           Skip to content
         </a>
-        {children}
+        {isClerkConfigured() ? <ClerkProvider>{content}</ClerkProvider> : content}
       </body>
     </html>
   );

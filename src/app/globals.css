@@ -219,6 +219,39 @@ a {
   border-bottom: 1px solid var(--line);
 }
 
+.auth-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.8fr);
+  gap: 4rem;
+  align-items: start;
+  padding: 5rem 0;
+}
+
+.auth-shell h1 {
+  max-width: 620px;
+  margin: 0.8rem 0 1rem;
+  font-size: clamp(2.2rem, 6vw, 4.5rem);
+  letter-spacing: -0.065em;
+  line-height: 0.98;
+}
+
+.save-prompt button {
+  border: 1px solid rgb(255 77 61 / 40%);
+  border-radius: 0.4rem;
+  background: var(--accent-soft);
+  color: #ff8b80;
+  padding: 0.65rem 0.85rem;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.save-prompt button:disabled { cursor: wait; opacity: 0.6; }
+
+@media (max-width: 720px) {
+  .auth-shell { grid-template-columns: 1fr; gap: 2rem; padding: 3rem 0; }
+}
+
 .product-loop li > span {
   color: var(--subtle);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;

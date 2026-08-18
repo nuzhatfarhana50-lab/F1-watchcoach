@@ -10,6 +10,18 @@ export const serverEnvironmentSchema = z.object({
   AI_WORKFLOW_SECRET: z.preprocess((value) => value === "" ? undefined : value, z.string().min(32).optional()),
   OPENAI_GENERATION_MODEL: z.string().min(1).default("gpt-5-mini"),
   OPENAI_EMBEDDING_MODEL: z.string().min(1).default("text-embedding-3-small"),
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: optionalSecret,
+  CLERK_SECRET_KEY: optionalSecret,
+}).superRefine((environment, context) => {
+  const hasPublishableKey = Boolean(environment.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
+  const hasSecretKey = Boolean(environment.CLERK_SECRET_KEY);
+  if (hasPublishableKey !== hasSecretKey) {
+    context.addIssue({
+      code: "custom",
+      path: [hasPublishableKey ? "CLERK_SECRET_KEY" : "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"],
+      message: "Clerk publishable and secret keys must be configured together",
+    });
+  }
 });
 
 export type ServerEnvironment = z.infer<typeof serverEnvironmentSchema>;

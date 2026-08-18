@@ -2,7 +2,7 @@
 
 F1 Watchcoach is a race-first learning application that turns real Formula 1 moments into lasting understanding.
 
-Phases 0–4 are complete. The domain, timing, learning-content, AI-generation, and embedding persistence groups are live-verified on the dedicated Neon development project. Normalized provider adapters, the public race library, the canonical Watch → Learn → Connect experience, and grounded AI service/workflow boundaries are implemented, while deterministic fixtures keep local development and CI independent of hosted services.
+Phases 0–5 are complete. The domain, timing, learning-content, AI-generation, embedding, and personal-learning persistence groups are live-verified on the dedicated Neon development project. Normalized provider adapters, public Watch → Learn → Connect journeys, grounded AI workflows, and optional authenticated learning memory are implemented, while deterministic fixtures keep local development and CI independent of hosted services.
 
 ## Local development
 
@@ -63,7 +63,13 @@ Public routes currently include:
 
 The pages render on the server and include explicit loading, empty, unsupported-season, provider-unavailable, not-found, and application-error states.
 
-Moment detail is intentionally evidence-first. Missing telemetry is labeled, partial evidence never masquerades as a complete record, media opens only at the attributed rights holder, and related moments resolve from real repository IDs. Browsing remains public; the saving prompt is non-interactive until authenticated learning memory is implemented in Phase 5.
+Moment detail is intentionally evidence-first. Missing telemetry is labeled, partial evidence never masquerades as a complete record, media opens only at the attributed rights holder, and related moments resolve from real repository IDs. Browsing remains public. When Clerk is configured, moment learning can be saved through an authenticated Server Action; otherwise the interface shows an explicit non-blocking unavailable state.
+
+## Authentication and learning memory
+
+Clerk handles identity only. F1 Watchcoach creates an internal `User` keyed by `externalAuthId` and stores race progress, moment encounters, concept progression, interests, driver/team preferences, explanation depth, and learning style in PostgreSQL. Server Actions derive identity on the server and never accept a user ID from the browser. Repository queries are scoped by compound user keys, and concept progression follows `unseen → encountered → learning → understood → reinforced` without backward or skipped transitions.
+
+Authentication is optional for local development and deterministic CI. Configure both Clerk variables to enable `/sign-in` and saving; configure neither to retain the full anonymous learning journey.
 
 ## Grounded AI and workflows
 
@@ -104,6 +110,7 @@ prisma/migrations/20260818193000_phase1_timing_evidence_types/migration.sql
 prisma/migrations/20260818193100_phase1_timing_evidence/migration.sql
 prisma/migrations/20260818195500_phase1_learning_content/migration.sql
 prisma/migrations/20260818221000_phase4_ai_metadata/migration.sql
+prisma/migrations/20260818234500_phase5_learning_memory/migration.sql
 
 # Apply pending migrations only after confirming the target database
 npm run db:migrate:deploy
@@ -131,6 +138,8 @@ Copy `.env.example` to `.env.local`. Current variables are:
 - `OPENAI_GENERATION_MODEL`: optional, defaults to `gpt-5-mini`.
 - `OPENAI_EMBEDDING_MODEL`: optional, defaults to `text-embedding-3-small`.
 - `AI_WORKFLOW_SECRET`: optional 32+ character bearer secret for the internal workflow trigger.
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`: optional Clerk browser key; must be configured with `CLERK_SECRET_KEY`.
+- `CLERK_SECRET_KEY`: optional Clerk server key; never exposed to client code.
 
 Do not commit `.env.local` or credentials.
 

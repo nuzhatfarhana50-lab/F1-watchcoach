@@ -180,6 +180,31 @@ enum EmbeddingTargetType {
   EXPLANATION
 }
 
+enum ExplanationDepth {
+  BEGINNER
+  STANDARD
+  DETAILED
+}
+
+enum LearningStyle {
+  BALANCED
+  VISUAL
+  TECHNICAL
+}
+
+enum RaceProgressStatus {
+  STARTED
+  COMPLETED
+}
+
+enum LearningState {
+  UNSEEN
+  ENCOUNTERED
+  LEARNING
+  UNDERSTOOD
+  REINFORCED
+}
+
 model Season {
   id                    String                  @id @default(uuid()) @db.Uuid
   year                  Int                     @unique
@@ -265,6 +290,7 @@ model Race {
   session            Session                 @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   moments            RaceMoment[]
   externalReferences ExternalDataReference[]
+  userHistories      UserRaceHistory[]
 }
 
 model Driver {
@@ -286,6 +312,7 @@ model Driver {
   results               Result[]
   championshipStandings ChampionshipStanding[]
   externalReferences    ExternalDataReference[]
+  userPreferences       UserDriverPreference[]
 }
 
 model Team {
@@ -300,6 +327,7 @@ model Team {
   results               Result[]
   championshipStandings ChampionshipStanding[]
   externalReferences    ExternalDataReference[]
+  userPreferences       UserTeamPreference[]
 }
 
 model TeamSeasonIdentity {
@@ -367,6 +395,8 @@ model RaceMoment {
   externalReferences  ExternalDataReference[]
   aiGenerations       AiGeneration[]
   embeddings          EmbeddingRecord[]
+  userEncounters      UserMomentEncounter[]
+  lastViewedBy        UserRaceHistory[]       @relation("LastViewedMoment")
 
   @@unique([raceId, slug])
   @@unique([raceId, sequence])
@@ -444,6 +474,7 @@ model Concept {
   explanations ExplanationConcept[]
   sources      ConceptSource[]
   embeddings   EmbeddingRecord[]
+  userStates   UserLearningState[]
 
   @@index([category, name])
 }
@@ -535,6 +566,96 @@ model EmbeddingRecord {
   @@index([conceptId])
   @@index([explanationId])
   @@index([targetType, model])
+}
+
+model User {
+  id                 String                 @id @default(uuid()) @db.Uuid
+  externalAuthId     String                 @unique
+  explanationDepth   ExplanationDepth       @default(BEGINNER)
+  learningStyle      LearningStyle          @default(BALANCED)
+  createdAt          DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime               @updatedAt @db.Timestamptz(3)
+  raceHistory        UserRaceHistory[]
+  momentEncounters   UserMomentEncounter[]
+  learningStates     UserLearningState[]
+  interests          UserInterest[]
+  driverPreferences  UserDriverPreference[]
+  teamPreferences    UserTeamPreference[]
+}
+
+model UserRaceHistory {
+  userId           String             @db.Uuid
+  raceId           String             @db.Uuid
+  status           RaceProgressStatus @default(STARTED)
+  progressPercent  Int                @default(0)
+  lastMomentId     String?            @db.Uuid
+  lastViewedAt     DateTime           @default(now()) @db.Timestamptz(3)
+  completedAt      DateTime?          @db.Timestamptz(3)
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  race             Race               @relation(fields: [raceId], references: [id], onDelete: Cascade)
+  lastMoment       RaceMoment?         @relation("LastViewedMoment", fields: [lastMomentId], references: [id], onDelete: SetNull)
+
+  @@id([userId, raceId])
+  @@index([userId, lastViewedAt])
+  @@index([raceId])
+  @@index([lastMomentId])
+}
+
+model UserMomentEncounter {
+  userId         String     @db.Uuid
+  raceMomentId   String     @db.Uuid
+  encounterCount Int        @default(1)
+  firstSeenAt    DateTime   @default(now()) @db.Timestamptz(3)
+  lastSeenAt     DateTime   @default(now()) @db.Timestamptz(3)
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  raceMoment     RaceMoment @relation(fields: [raceMomentId], references: [id], onDelete: Cascade)
+
+  @@id([userId, raceMomentId])
+  @@index([raceMomentId])
+}
+
+model UserLearningState {
+  userId         String        @db.Uuid
+  conceptId      String        @db.Uuid
+  state          LearningState @default(UNSEEN)
+  encounterCount Int           @default(0)
+  lastUpdatedAt  DateTime      @default(now()) @db.Timestamptz(3)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  concept        Concept       @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+
+  @@id([userId, conceptId])
+  @@index([conceptId, state])
+}
+
+model UserInterest {
+  userId    String   @db.Uuid
+  topic     String
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, topic])
+}
+
+model UserDriverPreference {
+  userId   String @db.Uuid
+  driverId String @db.Uuid
+  weight   Int    @default(1)
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  driver   Driver @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@id([userId, driverId])
+  @@index([driverId])
+}
+
+model UserTeamPreference {
+  userId String @db.Uuid
+  teamId String @db.Uuid
+  weight Int    @default(1)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([userId, teamId])
+  @@index([teamId])
 }
 
 model ExplanationConcept {

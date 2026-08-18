@@ -57,6 +57,14 @@ test("moment detail preserves landmarks and keyboard focus at mobile width", asy
   await expect(page.getByRole("heading", { name: "Read the race before the terminology." })).toBeVisible();
 });
 
+test("anonymous learning remains complete when authentication is not configured", async ({ page }) => {
+  await page.goto("/races/2024/12/moments/hamilton-times-final-stop");
+  await expect(page.getByRole("heading", { name: "Pit window" })).toBeVisible();
+  await expect(page.getByLabel("Saving availability")).toContainText("Public learning is ready");
+  await page.goto("/sign-in");
+  await expect(page.getByRole("status")).toHaveText("Authentication is not configured in this environment.");
+});
+
 test("internal AI workflow trigger is unavailable without server configuration", async ({ request }) => {
   const response = await request.post("/api/internal/ai/explanations", {
     data: { momentId: "80000000-0000-4000-8000-000000000001" },
