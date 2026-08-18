@@ -9,7 +9,7 @@ export function SiteHeader() {
       </Link>
       <nav className="primary-nav" aria-label="Primary navigation">
         <Link href="/races">Races</Link>
-        <span className="phase-badge">Public library · Phase 2</span>
+        <span className="phase-badge">Watch · Learn · Connect</span>
       </nav>
     </header>
   );

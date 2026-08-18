@@ -36,4 +36,19 @@ describe("RaceLibraryService", () => {
       });
     }
   });
+
+  it("resolves a grounded moment, its sources, and a real connected moment", async () => {
+    const result = await service.getMoment(2024, 12, "hamilton-times-final-stop");
+    expect(result.kind).toBe("found");
+    if (result.kind === "found") {
+      expect(result.moment.drivers.map((driver) => driver.name)).toEqual(["Lewis Hamilton", "Lando Norris"]);
+      expect(result.moment.evidence[0]).toMatchObject({ label: "Hamilton pit stop", detail: "Lap 38 · soft tyres" });
+      expect(result.moment.connections[0]).toMatchObject({
+        targetTitle: "Pérez reacts immediately to rain",
+        targetRaceName: "Dutch Grand Prix",
+        href: "/races/2023/13/moments/perez-pits-as-rain-arrives",
+      });
+      expect(result.moment.sources.length).toBeGreaterThan(1);
+    }
+  });
 });

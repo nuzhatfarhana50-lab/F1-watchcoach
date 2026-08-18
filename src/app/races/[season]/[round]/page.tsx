@@ -77,6 +77,7 @@ export default async function RacePage({ params }: RacePageProps) {
                 <h3>{moment.title}</h3>
                 <p>{moment.summary}</p>
                 <div className="concept-row">{moment.concepts.map((concept) => <span key={concept.slug}>{concept.name} · {concept.category}</span>)}</div>
+                <Link className="moment-link" href={`/races/${race.season}/${race.round}/moments/${moment.slug}`}>Explore evidence and explanation <span aria-hidden="true">→</span></Link>
               </div>
             </li>
           ))}

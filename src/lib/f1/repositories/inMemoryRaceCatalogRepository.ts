@@ -60,6 +60,9 @@ export class InMemoryRaceCatalogRepository implements RaceCatalogRepository {
       season,
       circuit,
       session,
+      drivers: fixture.drivers,
+      teams: fixture.teams,
+      sources: fixture.sources,
       moments: fixture.moments.filter((item) => item.raceId === raceId).sort((a, b) => a.sequence - b.sequence),
     };
   }

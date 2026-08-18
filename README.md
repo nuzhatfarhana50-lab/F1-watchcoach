@@ -2,7 +2,7 @@
 
 F1 Watchcoach is a race-first learning application that turns real Formula 1 moments into lasting understanding.
 
-Phases 0–2 are complete. The core, timing-evidence, and learning-content persistence groups are live-verified on the dedicated Neon development project. Normalized provider adapters and the public race library are implemented, while deterministic fixtures keep local development and CI independent of hosted services.
+Phases 0–3 are complete. The core, timing-evidence, and learning-content persistence groups are live-verified on the dedicated Neon development project. Normalized provider adapters, the public race library, and the canonical Watch → Learn → Connect experience are implemented, while deterministic fixtures keep local development and CI independent of hosted services.
 
 ## Local development
 
@@ -27,6 +27,12 @@ npm run verify
 
 This validates and generates the Prisma client, runs lint, strict TypeScript checks, deterministic unit/component/schema tests, a production build, and Playwright smoke tests. Production integrations are not required for this gate.
 
+Playwright also verifies the canonical race → moment → concept → connected real moment journey, mobile keyboard navigation, and desktop/mobile visual baselines. Curated-content grounding checks run with:
+
+```bash
+npm run eval
+```
+
 ## Architecture
 
 The application follows contract-first boundaries:
@@ -47,8 +53,11 @@ Public routes currently include:
 
 - `/races` for the fixture-backed race library.
 - `/races/[season]/[round]` for race context and structured moment previews.
+- `/races/[season]/[round]/moments/[moment]` for evidence, attributed media, explanation, concept teaching, a verified related moment, and source tracing.
 
 The pages render on the server and include explicit loading, empty, unsupported-season, provider-unavailable, not-found, and application-error states.
+
+Moment detail is intentionally evidence-first. Missing telemetry is labeled, partial evidence never masquerades as a complete record, media opens only at the attributed rights holder, and related moments resolve from real repository IDs. Browsing remains public; the saving prompt is non-interactive until authenticated learning memory is implemented in Phase 5.
 
 ## Provider boundaries
 

@@ -11,6 +11,9 @@ export type RaceCatalogEntry = {
   season: RaceFixtureCollection["seasons"][number];
   circuit: RaceFixtureCollection["circuits"][number];
   session: RaceFixtureCollection["sessions"][number];
+  drivers: RaceFixtureCollection["drivers"];
+  teams: RaceFixtureCollection["teams"];
+  sources: RaceFixtureCollection["sources"];
   moments: readonly RaceMoment[];
 };
 
