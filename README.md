@@ -2,7 +2,7 @@
 
 F1 Watchcoach is a race-first learning application that turns real Formula 1 moments into lasting understanding.
 
-Phases 0 and 1 are complete. The core, timing-evidence, and learning-content persistence groups are implemented and live-verified on the dedicated Neon development project. Phase 2 provider and public race-library work is next. Hosted services remain optional for deterministic development and CI.
+Phases 0–2 are complete. The core, timing-evidence, and learning-content persistence groups are live-verified on the dedicated Neon development project. Normalized provider adapters and the public race library are implemented, while deterministic fixtures keep local development and CI independent of hosted services.
 
 ## Local development
 
@@ -29,7 +29,7 @@ This validates and generates the Prisma client, runs lint, strict TypeScript che
 
 ## Architecture
 
-The first domain slice follows a contract-first boundary:
+The application follows contract-first boundaries:
 
 ```text
 Untrusted provider or fixture data
@@ -37,10 +37,32 @@ Untrusted provider or fixture data
 → normalized race objects
 → repository interface
 → in-memory adapter or Prisma/PostgreSQL
-→ application read models
+→ application service
+→ serializable Server Component read models
 ```
 
 The canonical fixture contains the 2024 British Grand Prix and a sourced 2023 Dutch Grand Prix comparison. Core race records, timing evidence, concepts, explanations, explicit moment connections, and attributed media metadata are persisted with provenance. The standings contract is implemented but intentionally has no canonical rows until a trusted standings source is added.
+
+Public routes currently include:
+
+- `/races` for the fixture-backed race library.
+- `/races/[season]/[round]` for race context and structured moment previews.
+
+The pages render on the server and include explicit loading, empty, unsupported-season, provider-unavailable, not-found, and application-error states.
+
+## Provider boundaries
+
+Jolpica provides calendars, identities, and historical results. OpenF1 provides supported recent sessions, laps, positions, pit stops, stints, race-control events, and optional telemetry. Vendor payloads are validated with Zod and normalized before application code sees them; typed failures distinguish invalid requests, unsupported coverage, rate limiting, service unavailability, and schema drift.
+
+Default UI composition uses canonical fixtures. Production adapters are wired at a server-only boundary and can be activated by later ingestion work without exposing vendor shapes to React components. Identical in-flight requests are deduplicated. Historical results cache for 24 hours, recent session metadata for five minutes, and rapidly changing timing evidence for five seconds.
+
+Live provider calls are opt-in and are never part of deterministic CI. Jolpica currently publishes its data under non-commercial terms; review provider licensing before any commercial production use.
+
+Run the separate smoke harness only when network-backed provider verification is intentional:
+
+```bash
+LIVE_F1_PROVIDER_TESTS=1 npm run test:integration:live
+```
 
 ## Database workflow
 

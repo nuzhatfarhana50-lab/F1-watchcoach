@@ -51,6 +51,16 @@ export class InMemoryRaceCatalogRepository implements RaceCatalogRepository {
   private toEntry(fixture: RaceFixtureCollection, raceId: string): RaceCatalogEntry {
     const race = fixture.races.find((item) => item.id === raceId)!;
     const grandPrix = fixture.grandsPrix.find((item) => item.id === race.grandPrixId)!;
-    return { race, grandPrix, moments: fixture.moments.filter((item) => item.raceId === raceId).sort((a, b) => a.sequence - b.sequence) };
+    const season = fixture.seasons.find((item) => item.id === grandPrix.seasonId)!;
+    const circuit = fixture.circuits.find((item) => item.id === grandPrix.circuitId)!;
+    const session = fixture.sessions.find((item) => item.id === race.sessionId)!;
+    return {
+      race,
+      grandPrix,
+      season,
+      circuit,
+      session,
+      moments: fixture.moments.filter((item) => item.raceId === raceId).sort((a, b) => a.sequence - b.sequence),
+    };
   }
 }

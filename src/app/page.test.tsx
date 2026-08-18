@@ -15,5 +15,6 @@ describe("home page", () => {
     expect(screen.getByText("Watch", { selector: "strong" })).toBeVisible();
     expect(screen.getByText("Learn", { selector: "strong" })).toBeVisible();
     expect(screen.getByText("Connect", { selector: "strong" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Browse the race library" })).toHaveAttribute("href", "/races");
   });
 });

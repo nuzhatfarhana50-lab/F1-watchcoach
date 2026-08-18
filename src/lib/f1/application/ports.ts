@@ -8,6 +8,9 @@ export type ImportSummary = {
 export type RaceCatalogEntry = {
   race: RaceFixtureCollection["races"][number];
   grandPrix: RaceFixtureCollection["grandsPrix"][number];
+  season: RaceFixtureCollection["seasons"][number];
+  circuit: RaceFixtureCollection["circuits"][number];
+  session: RaceFixtureCollection["sessions"][number];
   moments: readonly RaceMoment[];
 };
 

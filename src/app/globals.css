@@ -100,6 +100,23 @@ a {
   font-size: 0.75rem;
 }
 
+.primary-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.primary-nav > a {
+  transition: color 150ms ease;
+}
+
+.primary-nav > a:hover,
+.primary-nav > a:focus-visible {
+  color: var(--text);
+}
+
 .hero {
   display: grid;
   min-height: 31rem;
@@ -265,6 +282,258 @@ a {
   font-size: 0.85rem;
 }
 
+.page-heading {
+  display: grid;
+  min-height: 21rem;
+  align-content: end;
+  border-bottom: 1px solid var(--line);
+  padding: 3.5rem 0;
+}
+
+.page-heading h1,
+.race-hero h1 {
+  max-width: 760px;
+  margin: 0.75rem 0 1rem;
+  font-size: clamp(2.4rem, 6vw, 4.5rem);
+  font-weight: 680;
+  letter-spacing: -0.055em;
+  line-height: 1;
+}
+
+.page-heading > p:last-child,
+.race-hero > div > p:last-child,
+.section-heading > p:last-child {
+  max-width: 680px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.race-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 2rem;
+  border: 1px solid var(--line);
+  background: var(--line);
+}
+
+.race-card {
+  background: var(--surface);
+}
+
+.race-card > a {
+  display: flex;
+  min-height: 19rem;
+  flex-direction: column;
+  padding: 1.5rem;
+  transition: background 150ms ease;
+}
+
+.race-card > a:hover,
+.race-card > a:focus-visible {
+  background: var(--surface-raised);
+  outline: 1px solid var(--line-strong);
+  outline-offset: -1px;
+}
+
+.race-card-kicker,
+.moment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  color: var(--subtle);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.status-pill {
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 0.25rem 0.5rem;
+}
+
+.status-completed {
+  border-color: rgb(90 214 156 / 35%);
+  color: var(--success);
+}
+
+.race-card h2 {
+  margin: 2rem 0 0.4rem;
+  font-size: 1.65rem;
+  letter-spacing: -0.035em;
+}
+
+.race-card h2 + p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.race-card-data,
+.race-facts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin: auto 0 1.5rem;
+}
+
+.race-card-data div,
+.race-facts div {
+  border-top: 1px solid var(--line);
+  padding-top: 0.7rem;
+}
+
+.race-card-data dt,
+.race-facts dt {
+  color: var(--subtle);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+
+.race-card-data dd,
+.race-facts dd {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+}
+
+.text-link {
+  color: #ff8b80;
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.state-panel {
+  max-width: 650px;
+  margin: 4rem auto;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 2.5rem;
+}
+
+.state-panel h1,
+.state-panel h2 {
+  margin: 0.75rem 0;
+  font-size: 1.8rem;
+  letter-spacing: -0.035em;
+}
+
+.state-panel p:not(.section-label) {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.state-panel a {
+  display: inline-flex;
+  margin-top: 0.75rem;
+  color: #ff8b80;
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.breadcrumbs {
+  display: flex;
+  gap: 0.6rem;
+  padding: 1.25rem 0;
+  color: var(--subtle);
+  font-size: 0.75rem;
+}
+
+.breadcrumbs a {
+  color: var(--muted);
+}
+
+.race-hero {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 4rem;
+  align-items: end;
+  min-height: 19rem;
+  border-bottom: 1px solid var(--line);
+  padding: 2.5rem 0 3.5rem;
+}
+
+.race-facts {
+  margin: 0;
+}
+
+.race-facts dd {
+  text-transform: capitalize;
+}
+
+.moments-section {
+  display: grid;
+  grid-template-columns: 0.75fr 1.5fr;
+  gap: 4rem;
+  padding: 4rem 0;
+}
+
+.section-heading h2 {
+  margin: 0.7rem 0 1rem;
+  font-size: 1.7rem;
+  letter-spacing: -0.035em;
+}
+
+.moment-list {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 1px;
+  background: var(--line);
+  list-style: none;
+}
+
+.moment-card {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr;
+  gap: 1rem;
+  background: var(--surface);
+  padding: 1.4rem;
+}
+
+.moment-index {
+  color: var(--subtle);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.68rem;
+}
+
+.moment-meta {
+  justify-content: flex-start;
+}
+
+.moment-card h3 {
+  margin: 1rem 0 0.55rem;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+}
+
+.moment-card h3 + p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+.concept-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.2rem;
+}
+
+.concept-row span {
+  border: 1px solid rgb(255 77 61 / 25%);
+  background: var(--accent-soft);
+  color: #ff9b92;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.68rem;
+  text-transform: capitalize;
+}
+
 @media (max-width: 760px) {
   .app-shell {
     width: min(100% - 1.25rem, 1120px);
@@ -290,5 +559,21 @@ a {
 
   .product-loop li {
     grid-template-columns: 2rem 5rem 1fr;
+  }
+
+  .race-grid,
+  .race-hero,
+  .moments-section {
+    grid-template-columns: 1fr;
+  }
+
+  .race-hero,
+  .moments-section {
+    gap: 2rem;
+  }
+
+  .race-card-data,
+  .race-facts {
+    gap: 0.5rem;
   }
 }

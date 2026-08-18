@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
+    "test:integration:live": "vitest run --config vitest.live.config.ts",
     "eval": "vitest run evals",
     "db:generate": "prisma generate",
     "db:validate": "prisma validate",

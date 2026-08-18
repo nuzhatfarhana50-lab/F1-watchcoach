@@ -1,17 +1,11 @@
 import Link from "next/link";
 
+import { SiteHeader } from "./_components/site-header";
+
 export default function Home() {
   return (
     <main id="main-content" className="app-shell">
-      <header className="topbar">
-        <Link className="brand" href="/" aria-label="F1 Watchcoach home">
-          <span className="brand-mark" aria-hidden="true">
-            W
-          </span>
-          <span>F1 Watchcoach</span>
-        </Link>
-        <span className="phase-badge">Foundation · Phase 0</span>
-      </header>
+      <SiteHeader />
 
       <section className="hero" aria-labelledby="hero-title">
         <div className="eyebrow">Watch → Learn → Connect</div>
@@ -25,11 +19,9 @@ export default function Home() {
           role="group"
           aria-label="Current project status"
         >
-          <span className="primary-action" aria-disabled="true">
-            Race library coming in Phase 2
-          </span>
+          <Link className="primary-action" href="/races">Browse the race library</Link>
           <span className="status-dot">
-            <span aria-hidden="true" /> Quality foundation active
+            <span aria-hidden="true" /> Deterministic race data active
           </span>
         </div>
       </section>
