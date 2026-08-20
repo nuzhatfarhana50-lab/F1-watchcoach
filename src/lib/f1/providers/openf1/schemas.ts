@@ -10,6 +10,7 @@ export const openF1SessionSchema = z.object({
   circuit_short_name: z.string().min(1),
   date_start: z.string().datetime({ offset: true }),
   date_end: z.string().datetime({ offset: true }),
+  is_cancelled: z.boolean().optional().default(false),
 }).passthrough();
 
 export const openF1LapSchema = z.object({

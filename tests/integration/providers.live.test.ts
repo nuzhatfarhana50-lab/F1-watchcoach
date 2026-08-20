@@ -17,6 +17,9 @@ describe.skipIf(!live)("live F1 provider smoke checks", () => {
 
   it("finds OpenF1 race sessions for a supported season", async () => {
     const sessions = await new OpenF1Adapter(client).findRaceSessions(2024);
+    expect(sessions).toHaveLength(24);
+    expect(sessions.every((session) => session.name === "Race")).toBe(true);
     expect(sessions.some((session) => session.circuitShortName.toLowerCase().includes("silverstone"))).toBe(true);
+    expect(sessions.find((session) => session.circuitShortName.toLowerCase().includes("silverstone"))?.sessionKey).toBe(9558);
   });
 });

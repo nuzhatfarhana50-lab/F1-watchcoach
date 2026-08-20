@@ -2,7 +2,7 @@
 
 F1 Watchcoach is a race-first learning application that turns real Formula 1 moments into lasting understanding.
 
-Phases 0–7 are complete. The domain, timing, learning-content, AI-generation, embedding, and personal-learning persistence groups are live-verified on the dedicated Neon development project. Normalized provider adapters, public Watch → Learn → Connect journeys, grounded AI workflows, optional authenticated learning memory, replayable live ingestion, observability, and release documentation are implemented, while deterministic fixtures keep local development and CI independent of hosted services.
+Phases 0–7 are complete. The domain, timing, learning-content, AI-generation, embedding, and personal-learning persistence groups are live-verified on the dedicated Neon development project. Normalized provider adapters, a provider-backed race collection, public Watch → Learn → Connect journeys, grounded AI workflows, optional authenticated learning memory, replayable live ingestion, observability, and release documentation are implemented. Deterministic fixtures remain the fallback and keep tests and CI independent of hosted services.
 
 ## Local development
 
@@ -66,8 +66,8 @@ The canonical fixture contains the 2024 British Grand Prix and a sourced 2023 Du
 Public routes currently include:
 
 - `/` for the product entry point and scoped race-question interface.
-- `/races` for the fixture-backed race library.
-- `/races/[season]/[round]` for race context and structured moment previews.
+- `/races` for the season-selectable Jolpica calendar, OpenF1 coverage indicators, and curated learning races.
+- `/races/[season]/[round]` for either a curated Watchcoach learning record or a provider-backed calendar/classification record.
 - `/races/[season]/[round]/moments/[moment]` for evidence, attributed media, explanation, concept teaching, a verified related moment, and source tracing.
 - `/learning` for authenticated race resumption and teaching preferences.
 - `/live/[sessionKey]` for read-only normalized live state.
@@ -125,9 +125,11 @@ Workflow 4.8.3 currently brings transitive versions with published nanoid/undici
 
 Jolpica provides calendars, identities, and historical results. OpenF1 provides supported recent sessions, laps, positions, pit stops, stints, race-control events, and optional telemetry. Vendor payloads are validated with Zod and normalized before application code sees them; typed failures distinguish invalid requests, unsupported coverage, rate limiting, service unavailability, and schema drift.
 
-Default race-library composition uses canonical fixtures. The home race-question service checks those fixtures first, then uses the server-only Jolpica adapter to locate and retrieve other historical races. Production adapters never expose vendor shapes to React components. Identical in-flight requests are deduplicated. Historical results cache for 24 hours, recent session metadata for five minutes, and rapidly changing timing evidence for five seconds.
+The `/races` Server Component reads a requested `?season=YYYY` at request time. Jolpica is the authoritative round list from 1950 through the current season. For seasons from 2023 onward, the catalog matches non-cancelled OpenF1 Grand Prix sessions by race date and exposes whether detailed timing exists. OpenF1 Sprint sessions are deliberately excluded. Provider-only cards open an internal race record with a normalized Jolpica classification and direct provenance links; they do not pretend that a curated explanation exists.
 
-Live provider calls are opt-in and are never part of deterministic CI. Jolpica currently publishes its data under non-commercial terms; review provider licensing before any commercial production use.
+If Jolpica fails, a selected season falls back only to verified Watchcoach fixtures already in that season. If no trusted record exists, the UI shows an unavailable state rather than an empty or invented calendar. The 2024 British GP and 2023 Dutch GP remain visible as learning records even when live providers are unavailable. The home race-question service also checks those fixtures first, then uses the server-only Jolpica adapter to locate and retrieve other historical races. Production adapters never expose vendor shapes to React components. Identical in-flight requests are deduplicated. Historical calendar/results cache for 24 hours, recent session metadata for five minutes, and rapidly changing timing evidence for five seconds.
+
+Public historical catalog reads require no API key and run when `/races` or a provider-only detail is requested. Their adapter, merge, fallback, and rendering behavior is covered by deterministic fixtures; the explicit live smoke command remains outside CI. Jolpica and OpenF1 publish non-commercial/personal-use terms, so review both providers' current licensing before any commercial production use.
 
 Run the separate smoke harness only when network-backed provider verification is intentional:
 
@@ -245,6 +247,7 @@ The five-minute cron in `vercel.json` needs Vercel Pro. Disable or change it for
 - **AI falls back to curated content:** inspect source sufficiency, real-ID resolution, model configuration, and AI validation logs. The fallback is deliberate when grounding is inadequate.
 - **A race question is refused or asks for more context:** include a Formula 1 season and Grand Prix, circuit, country, or round. Non-F1 prompts are intentionally blocked before retrieval.
 - **A historical race answer is limited:** Jolpica may establish the calendar and classification without explaining strategy or causation. Use a canonical Watchcoach race for deeper sourced teaching, or add curated evidence rather than relying on model memory.
+- **A season catalog is unavailable:** retry the request, confirm outbound access to `api.jolpi.ca`, and inspect the structured `Race catalog provider unavailable` log. Verified Watchcoach races remain available as fallback; OpenF1 failure removes only the timing-coverage indicator.
 - **Clerk sign-in works but saving fails:** verify `DATABASE_URL`, the Phase 5 migration, and that both Clerk keys belong to the same instance. Domain learning data belongs in PostgreSQL, not Clerk metadata.
 - **Playwright cannot find Chromium:** run `npx playwright install chromium`, then retry `npm run test:e2e`.
 - **`npm audit` reports `deepmerge-ts`:** this is the documented Prisma CLI/config transitive advisory; do not apply npm's breaking forced downgrade. Re-evaluate when a compatible Prisma release is available.

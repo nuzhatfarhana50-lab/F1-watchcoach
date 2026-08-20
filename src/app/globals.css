@@ -521,6 +521,94 @@ a {
   line-height: 1.65;
 }
 
+.catalog-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3rem;
+  align-items: end;
+  border-bottom: 1px solid var(--line);
+  padding: 2.5rem 0;
+}
+
+.catalog-controls h2 {
+  margin: 0.7rem 0 0.55rem;
+  font-size: 1.7rem;
+  letter-spacing: -0.035em;
+}
+
+.catalog-controls > div > p:last-child {
+  max-width: 680px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.season-form {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.season-form label {
+  color: var(--subtle);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+
+.season-form > div {
+  display: flex;
+}
+
+.season-form select,
+.season-form button {
+  min-height: 2.55rem;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 0.8rem;
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.season-form select {
+  min-width: 7.5rem;
+  border-radius: 0.35rem 0 0 0.35rem;
+}
+
+.season-form button {
+  border-left: 0;
+  border-radius: 0 0.35rem 0.35rem 0;
+  color: #ff8b80;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.season-form button:hover,
+.season-form button:focus-visible {
+  background: var(--surface-raised);
+}
+
+.season-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+.season-shortcuts a {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  padding: 0.4rem 0.65rem;
+  font-size: 0.72rem;
+}
+
+.season-shortcuts a[aria-current="page"] {
+  border-color: rgb(255 77 61 / 45%);
+  background: var(--accent-soft);
+  color: #ff8b80;
+}
+
 .race-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -584,6 +672,32 @@ a {
   margin: 0;
   color: var(--muted);
   font-size: 0.86rem;
+}
+
+.coverage-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 1.2rem;
+}
+
+.coverage-row span {
+  border: 1px solid var(--line);
+  color: var(--muted);
+  padding: 0.28rem 0.45rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+}
+
+.curated-library {
+  border-top: 1px solid var(--line);
+  margin-top: 4rem;
+  padding-top: 4rem;
+}
+
+.curated-library .section-heading {
+  max-width: 680px;
 }
 
 .race-card-data,
@@ -682,6 +796,57 @@ a {
   grid-template-columns: 0.75fr 1.5fr;
   gap: 4rem;
   padding: 4rem 0;
+}
+
+.provider-detail {
+  display: grid;
+  grid-template-columns: 0.75fr 1.5fr;
+  gap: 4rem;
+  border-bottom: 1px solid var(--line);
+  padding: 4rem 0;
+}
+
+.classification-table-wrap {
+  min-width: 0;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+}
+
+.classification-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  font-size: 0.76rem;
+}
+
+.classification-table th,
+.classification-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.8rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.classification-table thead th {
+  color: var(--subtle);
+  font-size: 0.64rem;
+  font-weight: 550;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.classification-table tbody th {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.classification-table tbody td {
+  color: var(--muted);
+}
+
+.classification-table tbody tr:last-child th,
+.classification-table tbody tr:last-child td {
+  border-bottom: 0;
 }
 
 .section-heading h2 {
@@ -1067,6 +1232,18 @@ a {
   padding: 3rem 0;
 }
 
+.source-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.source-list strong {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 500;
+}
+
 .sources-section li {
   display: grid;
   grid-template-columns: 5rem 1fr;
@@ -1151,13 +1328,26 @@ a {
 
   .race-grid,
   .race-hero,
-  .moments-section {
+  .moments-section,
+  .provider-detail,
+  .catalog-controls {
     grid-template-columns: 1fr;
   }
 
   .race-hero,
-  .moments-section {
+  .moments-section,
+  .provider-detail,
+  .catalog-controls {
     gap: 2rem;
+  }
+
+  .season-form,
+  .season-form > div {
+    width: 100%;
+  }
+
+  .season-form select {
+    flex: 1;
   }
 
   .race-card-data,

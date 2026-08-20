@@ -3,9 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 
-import { ProviderUnavailable, UnsupportedSeason } from "@/app/_components/library-states";
+import { ProviderUnavailable } from "@/app/_components/library-states";
 import { SiteHeader } from "@/app/_components/site-header";
-import { getRaceLibraryService } from "@/lib/f1/application/composition";
+import { getRaceCatalogService, getRaceLibraryService } from "@/lib/f1/application/composition";
+import type { ProviderRaceDetail } from "@/lib/f1/application/raceCatalogService";
 import { isProviderFailure } from "@/lib/f1/providers/errors";
 import { logger } from "@/lib/observability/logger";
 
@@ -20,8 +21,12 @@ export async function generateMetadata({ params }: RacePageProps): Promise<Metad
   const parsed = parametersSchema.safeParse(await params);
   if (!parsed.success) return { title: "Race not found" };
   const result = await (await getRaceLibraryService()).getRace(parsed.data.season, parsed.data.round);
-  return result.kind === "found"
-    ? { title: `${result.race.name} ${result.race.season}`, description: result.race.officialName }
+  if (result.kind === "found") {
+    return { title: `${result.race.name} ${result.race.season}`, description: result.race.officialName };
+  }
+  const providerResult = await (await getRaceCatalogService()).getRaceDetail(parsed.data.season, parsed.data.round);
+  return providerResult.kind === "found"
+    ? { title: `${providerResult.detail.race.name} ${providerResult.detail.race.season}`, description: providerResult.detail.race.officialName }
     : { title: `${parsed.data.season} race` };
 }
 
@@ -45,10 +50,12 @@ export default async function RacePage({ params }: RacePageProps) {
     throw error;
   }
 
-  if (result.kind === "unsupported") {
-    return <PageFrame><UnsupportedSeason season={result.season} supportedSeasons={result.supportedSeasons} /></PageFrame>;
+  if (result.kind !== "found") {
+    const providerResult = await (await getRaceCatalogService()).getRaceDetail(parsed.data.season, parsed.data.round);
+    if (providerResult.kind === "unavailable") return <PageFrame><ProviderUnavailable provider="Jolpica" /></PageFrame>;
+    if (providerResult.kind === "notFound") notFound();
+    return <ProviderRacePage detail={providerResult.detail} />;
   }
-  if (result.kind === "notFound") notFound();
 
   const race = result.race;
   return (
@@ -82,6 +89,69 @@ export default async function RacePage({ params }: RacePageProps) {
             </li>
           ))}
         </ol>
+      </section>
+    </PageFrame>
+  );
+}
+
+function ProviderRacePage({ detail }: { detail: ProviderRaceDetail }) {
+  const race = detail.race;
+  const sources = [...race.sources, ...(detail.resultSource ? [detail.resultSource] : [])]
+    .filter((source, index, all) => all.findIndex((candidate) => candidate.url === source.url && candidate.label === source.label) === index);
+
+  return (
+    <PageFrame>
+      <nav className="breadcrumbs" aria-label="Breadcrumb"><Link href={`/races?season=${race.season}`}>Races</Link><span aria-hidden="true">/</span><span>{race.season} · Round {race.round}</span></nav>
+      <header className="race-hero">
+        <div>
+          <p className="eyebrow">{race.season} · Round {race.round}</p>
+          <h1>{race.name}</h1>
+          <p>{race.circuit.name} · {race.circuit.country}</p>
+        </div>
+        <dl className="race-facts">
+          <div><dt>Status</dt><dd>{race.status}</dd></div>
+          <div><dt>Timing</dt><dd>{race.coverage.timing ? "OpenF1" : "Not indexed"}</dd></div>
+          <div><dt>Learning</dt><dd>Catalog record</dd></div>
+        </dl>
+      </header>
+
+      <section className="provider-detail" aria-labelledby="classification-title">
+        <div className="section-heading">
+          <p className="section-label">Jolpica race record</p>
+          <h2 id="classification-title">Classification</h2>
+          <p>Provider facts are normalized at the server boundary and retain their source URLs. Race-specific teaching moments appear only after evidence-led curation.</p>
+        </div>
+        {detail.classificationState === "available" ? (
+          <div className="classification-table-wrap">
+            <table className="classification-table">
+              <thead><tr><th scope="col">Pos</th><th scope="col">Driver</th><th scope="col">Team</th><th scope="col">Grid</th><th scope="col">Laps</th><th scope="col">Points</th></tr></thead>
+              <tbody>
+                {detail.classification.map((row) => (
+                  <tr key={`${row.position ?? "nc"}:${row.driverName}`}>
+                    <td>{row.position ?? "NC"}</td><th scope="row">{row.driverName}</th><td>{row.teamName}</td><td>{row.gridPosition}</td><td>{row.lapsCompleted}</td><td>{row.points}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="inline-state" role="status">
+            <strong>{detail.classificationState === "notPublished" ? "Classification not published" : "Classification temporarily unavailable"}</strong>
+            <p>{detail.classificationState === "notPublished" ? "This race is scheduled or Jolpica has not published a result yet." : "The calendar record is available, but its result request could not be completed."}</p>
+          </div>
+        )}
+      </section>
+
+      <section className="sources-section" aria-labelledby="provider-sources-title">
+        <div><p className="section-label">Provenance</p><h2 id="provider-sources-title">Connected data sources</h2></div>
+        <ul className="source-list">
+          {sources.map((source) => (
+            <li key={`${source.provider}:${source.label}:${source.url ?? "fixture"}`}>
+              <span>{source.provider === "openf1" ? "OpenF1" : source.provider === "jolpica" ? "Jolpica" : "Watchcoach"}</span>
+              {source.url ? <a href={source.url} target="_blank" rel="noreferrer">{source.label} <span aria-hidden="true">↗</span></a> : <strong>{source.label}</strong>}
+            </li>
+          ))}
+        </ul>
       </section>
     </PageFrame>
   );

@@ -32,8 +32,10 @@ export class OpenF1Adapter implements RecentSessionProvider {
     if (!Number.isInteger(year) || year < 2023 || year > 2200) {
       throw new ProviderFailure("unsupported", "openf1", "OpenF1 historical coverage begins in 2023", { year });
     }
-    const response = await this.get("sessions", { year, session_type: "Race" }, RECENT_TTL_MS);
-    return this.parseArray(openF1SessionSchema, response).map((session) => ({
+    const response = await this.get("sessions", { year, session_name: "Race" }, RECENT_TTL_MS);
+    return this.parseArray(openF1SessionSchema, response)
+      .filter((session) => session.session_name === "Race" && !session.is_cancelled)
+      .map((session) => ({
       meetingKey: session.meeting_key,
       sessionKey: session.session_key,
       year: session.year,
@@ -44,7 +46,7 @@ export class OpenF1Adapter implements RecentSessionProvider {
       startsAt: session.date_start,
       endsAt: session.date_end,
       provenance: this.provenance(String(session.session_key), response, session.date_start),
-    }));
+      }));
   }
 
   async getSessionEvidence(sessionKey: number): Promise<OpenF1SessionEvidence> {

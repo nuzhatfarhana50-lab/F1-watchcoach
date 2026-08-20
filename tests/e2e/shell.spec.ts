@@ -33,7 +33,11 @@ test("browses the race library and opens the 2024 British Grand Prix", async ({ 
   await page.getByRole("link", { name: "Browse the race library" }).click();
 
   await expect(page).toHaveURL(/\/races$/);
-  await expect(page.getByRole("heading", { name: "Start with a race you watched." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Every season. Real race records." })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Season" })).toBeVisible();
+  await page.getByRole("link", { name: "2024", exact: true }).click();
+  await expect(page).toHaveURL(/\/races\?season=2024$/);
+  await expect(page.getByRole("heading", { name: "2024 Formula 1 season" })).toBeVisible();
   await page.getByRole("link", { name: "Open British Grand Prix 2024" }).click();
 
   await expect(page).toHaveURL(/\/races\/2024\/12$/);
@@ -81,7 +85,7 @@ test("anonymous learning remains complete when authentication is not configured"
   await page.goto("/learning");
   await expect(page.getByRole("heading", { name: "Learning memory unavailable" })).toBeVisible();
   await page.getByRole("link", { name: "Browse races" }).click();
-  await expect(page.getByRole("heading", { name: "Start with a race you watched." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Every season. Real race records." })).toBeVisible();
 });
 
 test("internal AI workflow trigger is unavailable without server configuration", async ({ request }) => {
@@ -93,15 +97,15 @@ test("internal AI workflow trigger is unavailable without server configuration",
 });
 
 test("live ingestion boundaries fail closed while historical learning stays available", async ({ request, page }) => {
-  const ingestion = await request.post("/api/ingestion/live", { data: { sessionKey: 9539 } });
+  const ingestion = await request.post("/api/ingestion/live", { data: { sessionKey: 9558 } });
   expect(ingestion.status()).toBe(503);
   const cron = await request.get("/api/cron/live");
   expect(cron.status()).toBe(503);
-  const live = await request.get("/api/live/9539");
+  const live = await request.get("/api/live/9558");
   expect(live.status()).toBe(503);
 
-  await page.goto("/live/9539");
+  await page.goto("/live/9558");
   await expect(page.getByRole("heading", { name: "Live timing is unavailable." })).toBeVisible();
   await page.getByRole("link", { name: "Races" }).first().click();
-  await expect(page.getByRole("heading", { name: "Start with a race you watched." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Every season. Real race records." })).toBeVisible();
 });
