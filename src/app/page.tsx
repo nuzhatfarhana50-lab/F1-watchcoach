@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { RaceQuestionChat } from "./_components/race-question-chat";
 import { SiteHeader } from "./_components/site-header";
 
 export default function Home() {
@@ -25,6 +26,8 @@ export default function Home() {
           </span>
         </div>
       </section>
+
+      <RaceQuestionChat />
 
       <section className="product-loop" aria-labelledby="loop-title">
         <div>

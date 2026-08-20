@@ -11,6 +11,21 @@ test("renders the product shell and learning loop", async ({ page }) => {
   await expect(page.getByText("Watch", { exact: true })).toBeVisible();
   await expect(page.getByText("Learn", { exact: true })).toBeVisible();
   await expect(page.getByText("Connect", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ask about an F1 race." })).toBeVisible();
+});
+
+test("race chat answers from fixtures and blocks non-F1 questions", async ({ page }) => {
+  await page.goto("/");
+  const input = page.getByLabel("Ask a race question");
+
+  await input.fill("Who won the 2024 British Grand Prix?");
+  await page.getByRole("button", { name: "Ask" }).click();
+  await expect(page.getByText(/Lewis Hamilton won the 2024 British Grand Prix/)).toBeVisible();
+  await expect(page.getByText("Evidence", { exact: true })).toBeVisible();
+
+  await input.fill("How to make noodles?");
+  await page.getByRole("button", { name: "Ask" }).click();
+  await expect(page.getByText(/I can only answer questions about Formula 1 races/)).toBeVisible();
 });
 
 test("browses the race library and opens the 2024 British Grand Prix", async ({ page }) => {

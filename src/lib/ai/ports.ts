@@ -1,4 +1,5 @@
 import type { GroundedExplanation, GroundingContext } from "./schemas";
+import type { RaceQuestionContext } from "./raceQuestionSchemas";
 
 export type GenerationMetadata = {
   generationId: string;
@@ -21,6 +22,10 @@ export interface ConceptClassifier {
 
 export interface ConnectionGenerator {
   discover(context: GroundingContext): Promise<unknown>;
+}
+
+export interface RaceQuestionGenerator {
+  answerRaceQuestion(context: RaceQuestionContext): Promise<unknown>;
 }
 
 export interface GroundingRetriever {

@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 import { AiGenerationError } from "./errors";
-import type { ConceptClassifier, ConnectionGenerator, EmbeddingGenerator, ExplanationGenerator } from "./ports";
+import type { ConceptClassifier, ConnectionGenerator, EmbeddingGenerator, ExplanationGenerator, RaceQuestionGenerator } from "./ports";
+import { generatedRaceQuestionAnswerJsonSchema, type RaceQuestionContext } from "./raceQuestionSchemas";
 import { conceptClassificationJsonSchema, connectionDiscoveryJsonSchema, groundedExplanationJsonSchema, type GroundingContext } from "./schemas";
 
 const responseSchema = z.object({
@@ -20,7 +21,7 @@ const embeddingResponseSchema = z.object({
   data: z.array(z.object({ index: z.number().int(), embedding: z.array(z.number()) })),
 });
 
-export class OpenAiAdapter implements ExplanationGenerator, EmbeddingGenerator, ConceptClassifier, ConnectionGenerator {
+export class OpenAiAdapter implements ExplanationGenerator, EmbeddingGenerator, ConceptClassifier, ConnectionGenerator, RaceQuestionGenerator {
   constructor(
     private readonly apiKey: string,
     private readonly generationModel = "gpt-5-mini",
@@ -84,7 +85,16 @@ export class OpenAiAdapter implements ExplanationGenerator, EmbeddingGenerator, 
     );
   }
 
-  private async generateJson(name: string, schema: object, instruction: string, context: GroundingContext): Promise<unknown> {
+  async answerRaceQuestion(context: RaceQuestionContext): Promise<unknown> {
+    return this.generateJson(
+      "grounded_f1_race_answer",
+      generatedRaceQuestionAnswerJsonSchema,
+      "Answer only the Formula 1 race question supplied. Use only the structured race evidence and sources in the context. Never use model memory, infer an unsupported cause, or answer a different topic. If the evidence does not establish the requested fact, say so plainly. Cite only source IDs present in the context and keep the answer concise and beginner-friendly.",
+      context,
+    );
+  }
+
+  private async generateJson(name: string, schema: object, instruction: string, context: unknown): Promise<unknown> {
     const response = await this.request("/v1/responses", {
       model: this.generationModel,
       reasoning: { effort: "low" },

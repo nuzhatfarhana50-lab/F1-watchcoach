@@ -27,7 +27,7 @@ npm run verify
 
 This validates and generates the Prisma client, runs lint, strict TypeScript checks, deterministic unit/component/schema tests, a production build, and Playwright smoke tests. Production integrations are not required for this gate.
 
-Playwright also verifies the canonical race → moment → concept → connected real moment journey, mobile keyboard navigation, and desktop/mobile visual baselines. Curated-content grounding checks run with:
+Playwright also verifies the home race-question boundary, the canonical race → moment → concept → connected real moment journey, mobile keyboard navigation, and desktop/mobile visual baselines. Curated-content grounding checks run with:
 
 ```bash
 npm run eval
@@ -65,6 +65,7 @@ The canonical fixture contains the 2024 British Grand Prix and a sourced 2023 Du
 
 Public routes currently include:
 
+- `/` for the product entry point and scoped race-question interface.
 - `/races` for the fixture-backed race library.
 - `/races/[season]/[round]` for race context and structured moment previews.
 - `/races/[season]/[round]/moments/[moment]` for evidence, attributed media, explanation, concept teaching, a verified related moment, and source tracing.
@@ -75,6 +76,27 @@ The pages render on the server and include explicit loading, empty, unsupported-
 
 Moment detail is intentionally evidence-first. Missing telemetry is labeled, partial evidence never masquerades as a complete record, media opens only at the attributed rights holder, and related moments resolve from real repository IDs. Browsing remains public. When Clerk is configured, moment learning can be saved through an authenticated Server Action; otherwise the interface shows an explicit non-blocking unavailable state.
 
+## Home race questions
+
+The home screen includes a deliberately constrained race-question interface, not a general-purpose chatbot. Each question is validated and scope-checked before provider lookup or model generation. Non-F1 prompts such as `How to make noodles?` are refused without calling Jolpica or OpenAI.
+
+Questions should identify a season and a Grand Prix, circuit, country, or round. The answer path is:
+
+```text
+Question
+→ deterministic F1 scope check
+→ canonical race/moment lookup
+→ Jolpica calendar and result lookup when needed
+→ normalized evidence context
+→ deterministic factual answer or grounded OpenAI explanation
+→ citation-ID resolution
+→ attributed source links
+```
+
+Canonical races can answer deeper moment, strategy, tyre, and concept questions from curated evidence. Other historical races use the facts available in Jolpica's normalized calendar and classification records; when those records do not establish a tactical cause, the interface says that evidence is insufficient instead of guessing. Factual result questions remain deterministic even when OpenAI is configured. Explanation-style generation is optional, uses only the retrieved context, and falls back to a sourced deterministic answer if the model is unavailable or cites an unknown source. Chat history is browser-local and is not persisted.
+
+The public Server Action validates the 300-character input boundary and applies an ephemeral IP-hashed fixed-window limit. It never logs question text or client addresses.
+
 ## Authentication and learning memory
 
 Clerk handles identity only. F1 Watchcoach creates an internal `User` keyed by `externalAuthId` and stores race progress, moment encounters, concept progression, interests, driver/team preferences, explanation depth, and learning style in PostgreSQL. Server Actions derive identity on the server and never accept a user ID from the browser. Repository queries are scoped by compound user keys, and concept progression follows `unseen → encountered → learning → understood → reinforced` without backward or skipped transitions.
@@ -83,7 +105,7 @@ Authentication is optional for local development and deterministic CI. Configure
 
 ## Grounded AI and workflows
 
-OpenAI access is centralized under `src/lib/ai`. Exact moment, concept, source, and connection records are retrieved first. Semantic candidates may be ranked only after structured filtering, and every generated ID is resolved back to an allowed application record. Invalid, unavailable, or invented output falls back to curated grounded content. Repeated stable generations use an idempotency key and cache instead of rerunning on render.
+OpenAI access is centralized under `src/lib/ai`. Exact race, moment, concept, source, and connection records are retrieved first. Semantic candidates may be ranked only after structured filtering, and every generated ID or race-question citation is resolved back to an allowed application record. Invalid, unavailable, or invented output falls back to curated grounded content. Repeated stable generations use an idempotency key and cache instead of rerunning on render.
 
 The Responses API requests strict JSON-schema output and Zod validates it again at the application boundary. `text-embedding-3-small` vectors use the approved 1536-dimension pgvector column. Model names remain configurable.
 
@@ -103,7 +125,7 @@ Workflow 4.8.3 currently brings transitive versions with published nanoid/undici
 
 Jolpica provides calendars, identities, and historical results. OpenF1 provides supported recent sessions, laps, positions, pit stops, stints, race-control events, and optional telemetry. Vendor payloads are validated with Zod and normalized before application code sees them; typed failures distinguish invalid requests, unsupported coverage, rate limiting, service unavailability, and schema drift.
 
-Default UI composition uses canonical fixtures. Production adapters are wired at a server-only boundary and can be activated by later ingestion work without exposing vendor shapes to React components. Identical in-flight requests are deduplicated. Historical results cache for 24 hours, recent session metadata for five minutes, and rapidly changing timing evidence for five seconds.
+Default race-library composition uses canonical fixtures. The home race-question service checks those fixtures first, then uses the server-only Jolpica adapter to locate and retrieve other historical races. Production adapters never expose vendor shapes to React components. Identical in-flight requests are deduplicated. Historical results cache for 24 hours, recent session metadata for five minutes, and rapidly changing timing evidence for five seconds.
 
 Live provider calls are opt-in and are never part of deterministic CI. Jolpica currently publishes its data under non-commercial terms; review provider licensing before any commercial production use.
 
@@ -152,7 +174,7 @@ Copy `.env.example` to `.env.local`. Current variables are:
 
 - `DATABASE_URL`: PostgreSQL connection string, required only for migration, seed, and database-backed application operations.
 - `LOG_LEVEL`: optional structured log threshold (`debug`, `info`, `warn`, or `error`).
-- `OPENAI_API_KEY`: optional; required only for intentional live generation/evaluation.
+- `OPENAI_API_KEY`: optional; enables grounded explanation-style home race answers and intentional live generation/evaluation. Results and curated fallbacks work without it.
 - `OPENAI_GENERATION_MODEL`: optional, defaults to `gpt-5-mini`.
 - `OPENAI_EMBEDDING_MODEL`: optional, defaults to `text-embedding-3-small`.
 - `AI_WORKFLOW_SECRET`: optional 32+ character bearer secret for the internal workflow trigger.
@@ -221,6 +243,8 @@ The five-minute cron in `vercel.json` needs Vercel Pro. Disable or change it for
 - **Live timing is unavailable:** verify `LIVE_SESSION_KEY`, Redis connectivity, and a recent successful ingestion Workflow. An expired checkpoint is labeled stale; cache loss never falls through to misleading empty data.
 - **An ingestion call returns 401/429/503:** check the bearer secret, bounded trigger rate, and Workflow/provider runtime logs respectively.
 - **AI falls back to curated content:** inspect source sufficiency, real-ID resolution, model configuration, and AI validation logs. The fallback is deliberate when grounding is inadequate.
+- **A race question is refused or asks for more context:** include a Formula 1 season and Grand Prix, circuit, country, or round. Non-F1 prompts are intentionally blocked before retrieval.
+- **A historical race answer is limited:** Jolpica may establish the calendar and classification without explaining strategy or causation. Use a canonical Watchcoach race for deeper sourced teaching, or add curated evidence rather than relying on model memory.
 - **Clerk sign-in works but saving fails:** verify `DATABASE_URL`, the Phase 5 migration, and that both Clerk keys belong to the same instance. Domain learning data belongs in PostgreSQL, not Clerk metadata.
 - **Playwright cannot find Chromium:** run `npx playwright install chromium`, then retry `npm run test:e2e`.
 - **`npm audit` reports `deepmerge-ts`:** this is the documented Prisma CLI/config transitive advisory; do not apply npm's breaking forced downgrade. Re-evaluate when a compatible Prisma release is available.
