@@ -16,16 +16,33 @@ test("renders the product shell and learning loop", async ({ page }) => {
 
 test("race chat answers from fixtures and blocks non-F1 questions", async ({ page }) => {
   await page.goto("/");
-  const input = page.getByLabel("Ask a race question");
+  const homeChat = page.locator(".race-chat-section");
+  const input = homeChat.getByLabel("Ask a race question");
 
   await input.fill("Who won the 2024 British Grand Prix?");
-  await page.getByRole("button", { name: "Ask" }).click();
-  await expect(page.getByText(/Lewis Hamilton won the 2024 British Grand Prix/)).toBeVisible();
-  await expect(page.getByText("Evidence", { exact: true })).toBeVisible();
+  await homeChat.getByRole("button", { name: "Ask" }).click();
+  await expect(homeChat.getByText(/Lewis Hamilton won the 2024 British Grand Prix/)).toBeVisible();
+  await expect(homeChat.getByText("Evidence", { exact: true })).toBeVisible();
 
   await input.fill("How to make noodles?");
-  await page.getByRole("button", { name: "Ask" }).click();
-  await expect(page.getByText(/I can only answer questions about Formula 1 races/)).toBeVisible();
+  await homeChat.getByRole("button", { name: "Ask" }).click();
+  await expect(homeChat.getByText(/I can only answer questions about Formula 1 races/)).toBeVisible();
+});
+
+test("floating Watchcoach opens on race pages and preserves the F1-only boundary", async ({ page }) => {
+  await page.goto("/races?season=2024");
+  await page.getByRole("button", { name: "Open Watchcoach race assistant" }).click();
+
+  const widget = page.getByRole("complementary", { name: "Ask about an F1 race" });
+  await expect(widget).toBeVisible();
+  await expect(widget.getByLabel("Ask a race question")).toBeFocused();
+  await widget.getByLabel("Ask a race question").fill("How to make noodles?");
+  await widget.getByRole("button", { name: "Ask" }).click();
+  await expect(widget.getByText(/I can only answer questions about Formula 1 races/)).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(widget).not.toBeVisible();
+  await expect(page.getByRole("button", { name: "Open Watchcoach race assistant" })).toBeFocused();
 });
 
 test("browses the race library and opens the 2024 British Grand Prix", async ({ page }) => {

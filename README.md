@@ -27,7 +27,7 @@ npm run verify
 
 This validates and generates the Prisma client, runs lint, strict TypeScript checks, deterministic unit/component/schema tests, a production build, and Playwright smoke tests. Production integrations are not required for this gate.
 
-Playwright also verifies the home race-question boundary, the canonical race → moment → concept → connected real moment journey, mobile keyboard navigation, and desktop/mobile visual baselines. Curated-content grounding checks run with:
+Playwright also verifies the home and floating race-question boundaries, mascot expansion, keyboard focus restoration, the canonical race → moment → concept → connected real moment journey, mobile keyboard navigation, and desktop/mobile visual baselines. Curated-content grounding checks run with:
 
 ```bash
 npm run eval
@@ -78,7 +78,9 @@ Moment detail is intentionally evidence-first. Missing telemetry is labeled, par
 
 ## Home race questions
 
-The home screen includes a deliberately constrained race-question interface, not a general-purpose chatbot. Each question is validated and scope-checked before provider lookup or model generation. Non-F1 prompts such as `How to make noodles?` are refused without calling Jolpica or OpenAI.
+The home screen includes a deliberately constrained race-question interface, not a general-purpose chatbot. The same interface is available site-wide from the floating red/white Watchcoach race-car mascot. Activating the mascot opens a compact panel, focuses its input, preserves the browser-local conversation when collapsed, and returns keyboard focus to the trigger when dismissed with Escape or the close control.
+
+Both surfaces use the same validated Server Action and grounding contract. Each question is scope-checked before provider lookup or model generation. Non-F1 prompts such as `How to make noodles?` are refused without calling Jolpica or OpenAI.
 
 Questions should identify a season and a Grand Prix, circuit, country, or round. The answer path is:
 
@@ -206,7 +208,7 @@ The current Prisma CLI transitively includes `deepmerge-ts@7.1.5`, which npm fla
 
 ## Fixture and provenance rules
 
-Deterministic fixtures live under `src/lib/f1/fixtures`. Every factual fixture object, moment, evidence item, explanation, connection, and media reference must identify at least one source. Official embeds and links are stored as metadata; protected F1 footage is never downloaded or rehosted.
+Deterministic fixtures live under `src/lib/f1/fixtures`. Every factual fixture object, moment, evidence item, explanation, connection, and media reference must identify at least one source. Official embeds and links are stored as metadata; protected F1 footage is never downloaded or rehosted. The Watchcoach mascot is an application-owned generated asset with an original logo-free vehicle design, rather than copied team branding.
 
 The in-memory repository is the default deterministic adapter for tests and CI. The Prisma seed is designed to be rerunnable without duplicating core records, timing evidence, learning content, source relationships, or external references.
 

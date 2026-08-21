@@ -4,6 +4,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
+import { FloatingRaceChat } from "@/app/_components/floating-race-chat";
 import { isClerkConfigured } from "@/lib/auth/configuration";
 import "./globals.css";
 
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  const content = <>{children}</>;
+  const content = <>{children}<FloatingRaceChat /></>;
   return (
     <html lang="en" className="dark">
       <body>
