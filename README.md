@@ -100,7 +100,7 @@ Structured questions remain deterministic even when OpenAI is configured. Race w
 
 Web retrieval is centralized behind the existing OpenAI Responses adapter. Its allowlist starts with Formula1.com, FIA, and official team domains, with approved motorsport reporting and Wikidata/Wikipedia as secondary sources. Responses without a trusted citation are rejected. Historical web results cache for 24 hours; current queries cache for five minutes. Stable structured answers avoid web search entirely.
 
-The public Server Action validates a 300-character question plus at most six bounded conversation turns and applies an ephemeral IP-hashed fixed-window limit. It returns only display-safe answer, citation, media, route, and entity-reference fields. Application logging never records question text, client addresses, credentials, or provider payloads; Next.js development Server Function argument logging is also disabled because it would otherwise print prompt text.
+The public Server Action validates a 300-character question plus at most six bounded conversation turns and applies an ephemeral IP-hashed fixed-window limit. Answers are instructed to stay within 120 words and have a 1,600-character server safety cap; follow-up requests resend only an 800-character excerpt plus resolved entity references, while factual evidence is retrieved again. It returns only display-safe answer, citation, media, route, and entity-reference fields. Application logging never records question text, client addresses, credentials, or provider payloads; Next.js development Server Function argument logging is also disabled because it would otherwise print prompt text.
 
 ## Authentication and learning memory
 
@@ -128,7 +128,7 @@ Workflow 4.8.3 currently brings transitive versions with published nanoid/undici
 
 ## Provider boundaries
 
-Jolpica provides calendars, identities, historical race results, driver career-result timelines, and driver standings. OpenF1 provides supported recent sessions, laps, positions, pit stops, stints, race-control events, and optional telemetry. Vendor payloads are validated with Zod and normalized before application code sees them; typed failures distinguish invalid requests, unsupported coverage, rate limiting, service unavailability, and schema drift.
+Jolpica provides calendars, identities, historical race results, driver career-result timelines, and driver standings. Driver careers follow Jolpica's documented 100-record maximum through bounded sequential pagination before any totals or team timelines are calculated. OpenF1 provides supported recent sessions, laps, positions, pit stops, stints, race-control events, and optional telemetry. Vendor payloads are validated with Zod and normalized before application code sees them; typed failures distinguish invalid requests, unsupported coverage, rate limiting, service unavailability, and schema drift.
 
 The `/races` Server Component reads a requested `?season=YYYY` at request time. Jolpica is the authoritative round list from 1950 through the current season. For seasons from 2023 onward, the catalog matches non-cancelled OpenF1 Grand Prix sessions by race date and exposes whether detailed timing exists. OpenF1 Sprint sessions are deliberately excluded. Provider-only cards open an internal race record with a normalized Jolpica classification and direct provenance links; they do not pretend that a curated explanation exists.
 

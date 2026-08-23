@@ -1,17 +1,20 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { askRaceQuestionAction } from "@/app/actions/race-question";
+import type { F1ConversationTurn } from "@/lib/ai/raceQuestionSchemas";
 
 import { RaceQuestionChat } from "./race-question-chat";
 
 vi.mock("@/app/actions/race-question", () => ({
-  askRaceQuestionAction: vi.fn(async ({ question }: { question: string }) => question.includes("noodles")
+  askRaceQuestionAction: vi.fn(async ({ question }: { question: string; conversation: readonly F1ConversationTurn[] }) => question.includes("noodles")
     ? { status: "blocked", message: "I can only answer questions about Formula 1 races using the connected F1 data sources." }
     : {
         status: "answered",
-        answer: question.includes("Carlos") ? "Carlos Sainz is a Spanish Formula 1 driver." : "Lewis Hamilton won the 2024 British Grand Prix.",
+        answer: question.includes("Long answer")
+          ? "A".repeat(3_000)
+          : question.includes("Carlos") ? "Carlos Sainz is a Spanish Formula 1 driver." : "Lewis Hamilton won the 2024 British Grand Prix.",
         sources: [{ id: "source-1", provider: "fia", title: "Official race report", url: "https://www.fia.com/example" }],
         media: [],
         resolvedEntities: question.includes("Carlos")
@@ -23,6 +26,10 @@ vi.mock("@/app/actions/race-question", () => ({
 }));
 
 describe("RaceQuestionChat", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("renders a scoped prompt and shows grounded evidence", async () => {
     const user = userEvent.setup();
     render(<RaceQuestionChat />);
@@ -66,5 +73,25 @@ describe("RaceQuestionChat", () => {
         entities: [expect.objectContaining({ type: "DRIVER", externalId: "sainz" })],
       })]),
     }));
+  });
+
+  it("does not resend an oversized assistant answer on later questions", async () => {
+    const user = userEvent.setup();
+    render(<RaceQuestionChat />);
+    const input = screen.getByLabelText("Ask an F1 question");
+
+    await user.type(input, "Long answer about F1 history");
+    await user.click(screen.getByRole("button", { name: "Ask" }));
+    await waitFor(() => expect(vi.mocked(askRaceQuestionAction)).toHaveBeenCalledTimes(1));
+
+    await user.type(input, "What happened next?");
+    await user.click(screen.getByRole("button", { name: "Ask" }));
+    await waitFor(() => expect(vi.mocked(askRaceQuestionAction)).toHaveBeenCalledTimes(2));
+
+    const lastInput = vi.mocked(askRaceQuestionAction).mock.calls.at(-1)?.[0] as {
+      conversation: readonly F1ConversationTurn[];
+    } | undefined;
+    const assistantTurn = lastInput?.conversation.find((turn) => turn.role === "assistant");
+    expect(assistantTurn?.text).toHaveLength(800);
   });
 });

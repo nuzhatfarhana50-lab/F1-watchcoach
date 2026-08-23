@@ -5,6 +5,7 @@ import type { HistoricalRaceProvider } from "@/lib/f1/providers/contracts";
 import { F1ContextRetriever, type F1MediaReference } from "./f1ContextRetriever";
 import { classifyF1ScopeDeterministically, planF1Query, resolveF1Entities } from "./f1QueryPlanner";
 import type { F1ScopeClassifier, F1WebRetriever, RaceQuestionGenerator } from "./ports";
+import { limitRaceQuestionAnswer } from "./raceQuestionLimits";
 import {
   generatedRaceQuestionAnswerSchema,
   raceQuestionContextSchema,
@@ -44,7 +45,13 @@ export class RaceQuestionService {
   async ask(input: unknown): Promise<RaceQuestionResponse> {
     const parsed = raceQuestionInputSchema.safeParse(input);
     if (!parsed.success) {
-      return { status: "needsContext", message: parsed.error.issues[0]?.message ?? "Ask a specific Formula 1 question." };
+      const issue = parsed.error.issues[0];
+      return {
+        status: "needsContext",
+        message: issue?.path[0] === "conversation"
+          ? "The recent chat context could not be read. Clear the conversation and try that F1 question again."
+          : issue?.message ?? "Ask a specific Formula 1 question.",
+      };
     }
 
     const { question, conversation } = parsed.data;
@@ -73,7 +80,7 @@ export class RaceQuestionService {
           const web = await this.webRetriever.retrieveF1Web({ question, plan, structuredFacts: context.structuredFacts });
           return {
             status: "answered",
-            answer: web.answer,
+            answer: limitRaceQuestionAnswer(web.answer),
             sources: web.sources,
             media: context.media,
             resolvedEntities: context.entities,
@@ -109,7 +116,7 @@ export class RaceQuestionService {
         if (resolvedSources.length !== generated.sourceIds.length) throw new Error("Generated answer referenced an unknown source");
         return {
           status: "answered",
-          answer: generated.answer,
+          answer: limitRaceQuestionAnswer(generated.answer),
           sources: resolvedSources,
           media: context.media,
           resolvedEntities: context.entities,
@@ -126,7 +133,7 @@ export class RaceQuestionService {
       const sources = context.sources.filter((source) => allowedSourceIds.has(source.id));
       return {
         status: "answered",
-        answer: context.deterministicAnswer,
+        answer: limitRaceQuestionAnswer(context.deterministicAnswer),
         sources: sources.length > 0 ? sources : context.sources.slice(0, 1),
         media: context.media,
         resolvedEntities: context.entities,

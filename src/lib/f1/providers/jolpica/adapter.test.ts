@@ -61,6 +61,41 @@ describe("JolpicaAdapter", () => {
     });
   });
 
+  it("paginates complete driver careers before calculating totals", async () => {
+    const requestedOffsets: string[] = [];
+    const paginatedClient: ProviderRequestClient = {
+      async get(request) {
+        const offset = new URL(request.url).searchParams.get("offset") ?? "0";
+        requestedOffsets.push(offset);
+        const fixturePage = structuredClone(payload);
+        const page = {
+          ...fixturePage,
+          MRData: {
+            ...fixturePage.MRData,
+            limit: "1",
+            offset,
+            total: "2",
+          },
+        };
+        if (offset === "1") {
+          page.MRData.RaceTable.Races[0]!.season = "2025";
+          page.MRData.RaceTable.Races[0]!.date = "2025-07-06";
+          page.MRData.RaceTable.Races[0]!.Results![0]!.Constructor = {
+            constructorId: "ferrari",
+            name: "Ferrari",
+            nationality: "Italian",
+          };
+        }
+        return { data: page, fetchedAt: "2026-08-18T12:00:00.000Z", sourceUrl: request.url };
+      },
+    };
+
+    const career = await new JolpicaAdapter(paginatedClient).getDriverCareer("hamilton");
+    expect(requestedOffsets).toEqual(["0", "1"]);
+    expect(career).toMatchObject({ starts: 2, wins: 2, firstSeason: 2024, lastSeason: 2025 });
+    expect(career?.results[1]?.team.externalId).toBe("ferrari");
+  });
+
   it("normalizes driver standings for deterministic championship answers", async () => {
     const [leader] = await new JolpicaAdapter(client).getDriverStandings(2024);
     expect(leader).toMatchObject({

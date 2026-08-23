@@ -13,6 +13,8 @@ import type { ProviderRequestClient, ProviderResponse } from "../requestClient";
 import { jolpicaDriverStandingsResponseSchema, jolpicaRaceResponseSchema, type JolpicaRace } from "./schemas";
 
 const HISTORICAL_TTL_MS = 24 * 60 * 60 * 1_000;
+const CAREER_PAGE_SIZE = 100;
+const MAX_CAREER_RESULTS = 2_000;
 
 export class JolpicaAdapter implements HistoricalRaceProvider {
   constructor(
@@ -66,9 +68,32 @@ export class JolpicaAdapter implements HistoricalRaceProvider {
     if (!/^[a-z0-9_-]+$/i.test(driverExternalId)) {
       throw new ProviderFailure("invalidRequest", "jolpica", "Driver identifier is invalid");
     }
-    const response = await this.get(`drivers/${encodeURIComponent(driverExternalId)}/results.json?limit=2000`);
-    const races = this.parse(response).MRData.RaceTable.Races;
-    const results = races.flatMap((race) => (race.Results ?? []).map((result) => {
+    const pages: { response: ProviderResponse; races: readonly JolpicaRace[] }[] = [];
+    let offset = 0;
+    let total = 0;
+    do {
+      const response = await this.get(`drivers/${encodeURIComponent(driverExternalId)}/results.json?limit=${CAREER_PAGE_SIZE}&offset=${offset}`);
+      const parsed = this.parse(response);
+      const pageLimit = Number(parsed.MRData.limit ?? CAREER_PAGE_SIZE);
+      total = Number(parsed.MRData.total ?? parsed.MRData.RaceTable.Races.length);
+      if (!Number.isInteger(pageLimit) || pageLimit < 1 || !Number.isInteger(total) || total < 0) {
+        throw new ProviderFailure("schemaDrift", "jolpica", "Jolpica career pagination metadata was invalid", {
+          sourceUrl: response.sourceUrl,
+        });
+      }
+      if (total > MAX_CAREER_RESULTS) {
+        throw new ProviderFailure("unsupported", "jolpica", "Jolpica career result set exceeded the supported pagination bound", {
+          driverExternalId,
+          total,
+        });
+      }
+      pages.push({ response, races: parsed.MRData.RaceTable.Races });
+      offset += pageLimit;
+      if (parsed.MRData.RaceTable.Races.length === 0) break;
+    } while (offset < total);
+
+    const firstResponse = pages[0]?.response;
+    const results = pages.flatMap(({ races, response }) => races.flatMap((race) => (race.Results ?? []).map((result) => {
       const provenance = this.provenance(race, response);
       return {
         season: Number(race.season),
@@ -95,10 +120,10 @@ export class JolpicaAdapter implements HistoricalRaceProvider {
         },
         provenance,
       };
-    }));
+    })));
     const first = results[0];
     const last = results.at(-1);
-    if (!first || !last) return null;
+    if (!first || !last || !firstResponse) return null;
     return {
       driver: first.driver,
       firstSeason: Math.min(...results.map((result) => result.season)),
@@ -110,8 +135,8 @@ export class JolpicaAdapter implements HistoricalRaceProvider {
       provenance: {
         provider: "jolpica",
         externalId: `driver:${first.driver.externalId}:results`,
-        sourceUrl: response.sourceUrl,
-        fetchedAt: response.fetchedAt,
+        sourceUrl: firstResponse.sourceUrl,
+        fetchedAt: firstResponse.fetchedAt,
       },
     };
   }

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FormEvent, useRef, useState, useTransition } from "react";
 
 import { askRaceQuestionAction } from "@/app/actions/race-question";
+import { raceQuestionLimits } from "@/lib/ai/raceQuestionLimits";
 import type { RaceQuestionResponse } from "@/lib/ai/raceQuestionService";
 
 type ChatEntry = {
@@ -61,9 +62,9 @@ export function RaceQuestionChatPanel({
     setMessages((current) => [...current.slice(-6), userEntry]);
     if (inputRef.current) inputRef.current.value = "";
 
-    const conversation = messages.slice(-6).map((message) => ({
+    const conversation = messages.slice(-raceQuestionLimits.conversationTurns).map((message) => ({
       role: message.role,
-      text: message.text,
+      text: message.text.slice(0, raceQuestionLimits.conversationContextCharacters),
       entities: message.response?.status === "answered" ? message.response.resolvedEntities : [],
     }));
 
@@ -140,7 +141,7 @@ export function RaceQuestionChatPanel({
             ref={inputRef}
             type="text"
             minLength={3}
-            maxLength={300}
+            maxLength={raceQuestionLimits.questionCharacters}
             autoComplete="off"
             placeholder="Who is Carlos Sainz?"
             disabled={pending}

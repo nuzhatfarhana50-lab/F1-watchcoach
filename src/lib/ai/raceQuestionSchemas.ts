@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { raceQuestionLimits } from "./raceQuestionLimits";
+
 export const f1ScopeSchema = z.enum(["F1_IN_SCOPE", "F1_RELATED_CONTEXT", "OUT_OF_SCOPE"]);
 
 export const f1QueryIntentSchema = z.enum([
@@ -19,13 +21,13 @@ export const f1EntityReferenceSchema = z.object({
 
 export const f1ConversationTurnSchema = z.object({
   role: z.enum(["user", "assistant"]),
-  text: z.string().trim().min(1).max(2_000),
+  text: z.string().trim().min(1).max(raceQuestionLimits.conversationTurnCharacters),
   entities: z.array(f1EntityReferenceSchema).max(8).default([]),
 });
 
 export const raceQuestionInputSchema = z.object({
-  question: z.string().trim().min(3, "Ask a little more about the race.").max(300, "Keep the question under 300 characters."),
-  conversation: z.array(f1ConversationTurnSchema).max(6).default([]),
+  question: z.string().trim().min(3, "Ask a little more about the race.").max(raceQuestionLimits.questionCharacters, "Keep the question under 300 characters."),
+  conversation: z.array(f1ConversationTurnSchema).max(raceQuestionLimits.conversationTurns).default([]),
 });
 
 export const f1QueryPlanSchema = z.object({
@@ -93,7 +95,7 @@ export const raceQuestionContextSchema = z.object({
 });
 
 export const generatedRaceQuestionAnswerSchema = z.object({
-  answer: z.string().trim().min(1).max(2_000),
+  answer: z.string().trim().min(1).max(raceQuestionLimits.answerCharacters),
   sourceIds: z.array(z.string().min(1)).min(1).max(8),
 });
 
@@ -101,7 +103,7 @@ export const generatedRaceQuestionAnswerJsonSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    answer: { type: "string", minLength: 1, maxLength: 2_000 },
+    answer: { type: "string", minLength: 1, maxLength: raceQuestionLimits.answerCharacters },
     sourceIds: { type: "array", minItems: 1, maxItems: 8, items: { type: "string", minLength: 1 } },
   },
   required: ["answer", "sourceIds"],

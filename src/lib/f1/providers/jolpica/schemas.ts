@@ -43,6 +43,9 @@ const raceSchema = z.object({
 
 export const jolpicaRaceResponseSchema = z.object({
   MRData: z.object({
+    limit: z.string().regex(/^\d+$/).optional(),
+    offset: z.string().regex(/^\d+$/).optional(),
+    total: z.string().regex(/^\d+$/).optional(),
     RaceTable: z.object({
       Races: z.array(raceSchema),
     }).passthrough(),

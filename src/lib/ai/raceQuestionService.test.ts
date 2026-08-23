@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { HistoricalRaceProvider, ProviderDriverCareer, ProviderRaceResult, ProviderRaceSummary } from "@/lib/f1/providers/contracts";
 
+import { raceQuestionLimits } from "./raceQuestionLimits";
 import { RaceQuestionService } from "./raceQuestionService";
 
 const abuDhabi2021: ProviderRaceSummary = {
@@ -142,7 +143,7 @@ describe("RaceQuestionService", () => {
   it("uses structured career context but requires sourced web evidence for transfer motives", async () => {
     const webRetriever = {
       retrieveF1Web: vi.fn(async ({ structuredFacts }: { structuredFacts: readonly string[] }) => ({
-        answer: "Ferrari confirmed the change; the stated and reported context is separated from interpretation.",
+        answer: "Ferrari confirmed the change; the stated and reported context is separated from interpretation. ([Ferrari](https://www.ferrari.com/example))",
         sources: [{ id: "web:ferrari", provider: "ferrari.com", title: "Ferrari announcement", url: "https://www.ferrari.com/example" }],
         structuredFacts,
       })),
@@ -150,10 +151,30 @@ describe("RaceQuestionService", () => {
     const result = await new RaceQuestionService(provider(), undefined, undefined, webRetriever).ask({ question: "Why did Carlos Sainz leave Ferrari?" });
 
     expect(result.status).toBe("answered");
+    if (result.status !== "answered") return;
+    expect(result.answer).toBe("Ferrari confirmed the change; the stated and reported context is separated from interpretation.");
     expect(webRetriever.retrieveF1Web).toHaveBeenCalledWith(expect.objectContaining({
       structuredFacts: [expect.stringContaining("Carlos Sainz")],
       plan: expect.objectContaining({ needsWebSearch: true }),
     }));
+  });
+
+  it("keeps sourced web answers precise enough for the conversation contract", async () => {
+    const webRetriever = {
+      retrieveF1Web: vi.fn(async () => ({
+        answer: `${"A precise F1 fact. ".repeat(150)}This should not survive the answer boundary.`,
+        sources: [{ id: "web:ferrari", provider: "ferrari.com", title: "Ferrari announcement", url: "https://www.ferrari.com/example" }],
+      })),
+    };
+    const result = await new RaceQuestionService(provider(), undefined, undefined, webRetriever).ask({
+      question: "Why did Carlos Sainz leave Ferrari?",
+    });
+
+    expect(result.status).toBe("answered");
+    if (result.status !== "answered") return;
+    expect(result.answer.length).toBeLessThanOrEqual(raceQuestionLimits.answerCharacters);
+    expect(result.answer).toMatch(/…$/);
+    expect(result.answer).not.toContain("This should not survive");
   });
 
   it("uses conversation entity references for a follow-up without guessing from answer text", async () => {

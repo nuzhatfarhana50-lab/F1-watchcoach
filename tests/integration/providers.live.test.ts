@@ -22,7 +22,9 @@ describe.skipIf(!live)("live F1 provider smoke checks", () => {
       adapter.getDriverStandings(2012),
     ]);
     expect(career?.driver.familyName).toBe("Sainz");
-    expect(career?.results.length).toBeGreaterThan(0);
+    expect(career?.results.length).toBeGreaterThan(100);
+    expect(career?.lastSeason).toBeGreaterThanOrEqual(2024);
+    expect(career?.results.some((result) => result.team.externalId === "ferrari")).toBe(true);
     expect(standings[0]?.driver.externalId).toBe("vettel");
   });
 
