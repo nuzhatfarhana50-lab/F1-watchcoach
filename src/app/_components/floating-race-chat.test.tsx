@@ -7,7 +7,7 @@ import { FloatingRaceChat } from "./floating-race-chat";
 vi.mock("@/app/actions/race-question", () => ({
   askRaceQuestionAction: vi.fn(async () => ({
     status: "blocked",
-    message: "I can only answer questions about Formula 1 races using the connected F1 data sources.",
+    message: "I stick to Formula 1. Ask me about drivers, teams, races, history, strategy, engineering, regulations, or F1 business.",
   })),
 }));
 
@@ -26,7 +26,7 @@ describe("FloatingRaceChat", () => {
 
     await user.type(screen.getByLabelText("Ask an F1 question"), "How to make noodles?");
     await user.click(screen.getByRole("button", { name: "Ask" }));
-    expect(await screen.findByText(/I can only answer questions about Formula 1 races/)).toBeVisible();
+    expect(await screen.findByText(/I stick to Formula 1/)).toBeVisible();
 
     await user.keyboard("{Escape}");
     expect(panel).not.toBeVisible();

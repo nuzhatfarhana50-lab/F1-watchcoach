@@ -13,6 +13,8 @@ const CURRENT_PATTERN = /\b(current|currently|today|tonight|this season|latest|r
 const HISTORICAL_PATTERN = /\b(history|historical|career|formerly|previously|first|last|leave|left|joined|moved|between|in (?:19|20)\d{2})\b/i;
 const PRONOUN_PATTERN = /\b(he|him|his|she|her|they|them|their|that driver|that team|that race|that overtake|that strategy|this penalty|those wins|one of those)\b/i;
 const EXPLICIT_OUT_OF_SCOPE_PATTERN = /\b(make (?:me )?(?:noodles|pasta|rice)|recipe|python|javascript|sorting an array|capital of|nba|nfl|cricket|investment advice|stock tips|road[- ]car automatic gearbox|favorite food|favourite food|entire oil business|other cars does pirelli)\b/i;
+const DRIVER_CREDENTIAL_PATTERN = /\b(qualifications?|credentials?|achievements?|accomplishments?|honou?rs?)\b/i;
+const QUALIFYING_RECORD_PATTERN = /\b(qualifying|qualification results?|pole positions?|poles?)\b/i;
 
 const DRIVER_ALIASES = [
   ["Carlos Sainz", "sainz", ["carlos sainz", "carlos", "sainz"]],
@@ -157,8 +159,9 @@ export function classifyF1ScopeDeterministically(
     return conversation.some((turn) => turn.entities.length > 0) ? "F1_RELATED_CONTEXT" : "F1_IN_SCOPE";
   }
   if (PRONOUN_PATTERN.test(question) && conversation.some((turn) => turn.entities.length > 0)) return "F1_IN_SCOPE";
-  if (/\bwho (?:is|was)\s+[A-Z][a-z'-]+/u.test(question)) return null;
+  if (/\b(?:who (?:is|was)|tell me about)\s+[\p{L}'’-]{2,}(?:\s+[\p{L}'’-]{2,}){0,3}/iu.test(question)) return null;
   if (/\b(what happened|why did|why was|what does)\b/i.test(question) && /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b/.test(question)) return null;
+  if (DRIVER_CREDENTIAL_PATTERN.test(question) && /\b[\p{L}'’-]{3,}\s+[\p{L}'’-]{3,}/iu.test(question)) return null;
   return "OUT_OF_SCOPE";
 }
 
@@ -170,8 +173,10 @@ export function planF1Query(
   const intents = new Set<F1QueryIntent>();
   const hasDriver = entities.some((entity) => entity.type === "DRIVER");
   const hasTeam = entities.some((entity) => entity.type === "TEAM");
+  const asksDriverCredentials = hasDriver && DRIVER_CREDENTIAL_PATTERN.test(question);
+  const asksQualifyingRecord = hasDriver && QUALIFYING_RECORD_PATTERN.test(question);
 
-  if (/\b(who is|who was|tell me about)\b/i.test(question) && hasDriver) intents.add("DRIVER_PROFILE");
+  if ((/\b(who is|who was|tell me about)\b/i.test(question) && hasDriver) || asksDriverCredentials) intents.add("DRIVER_PROFILE");
   if (/\b(career|teams? (?:has|did)|drive for|drove for|first (?:f1 )?team|teammate|joined)\b/i.test(question)) intents.add("DRIVER_CAREER");
   if (/\b(leave|left|move|moved|join|joined|transfer|contract|replace(?:d)?)\b/i.test(question) && hasDriver) {
     intents.add("DRIVER_TRANSFER");
@@ -184,7 +189,7 @@ export function planF1Query(
   if (/\bseason\b/i.test(question)) intents.add("SEASON");
   if (/\b(championship|standings|title)\b/i.test(question)) intents.add("CHAMPIONSHIP");
   if (/\b(circuit|track|where (?:is|was|did)|grand prix)\b/i.test(question)) intents.add("CIRCUIT");
-  if (/\b(how many|record|statistics?|stats|more wins|podiums?|better in qualifying)\b/i.test(question)) intents.add("STATISTICS");
+  if (/\b(how many|record|statistics?|stats|more wins|podiums?|better in qualifying)\b/i.test(question) || asksDriverCredentials || asksQualifyingRecord) intents.add("STATISTICS");
   if (/\b(strategy|undercut|overcut|pit window|track position|tyre|tire|stint|safety car)\b/i.test(question)) intents.add("STRATEGY");
   if (/\b(downforce|dirty air|diffuser|floor|aero|aerodynamic|drag|brake bias|brake migration|energy recovery|ers|power unit|wing level|cfd|carbon fib(?:re|er)|cockpit|chassis)\b/i.test(question)) intents.add("TECHNICAL");
   if (/\b(regulations?|rules?|parc ferm|cost cap|penali[sz]ed|penalty|allowed|fia)\b/i.test(question)) intents.add("REGULATIONS");
@@ -220,7 +225,7 @@ export function planF1Query(
     ].includes(intent)),
     needsRaceMoments: intentList.some((intent) => ["RACE_MOMENT", "MEDIA"].includes(intent)),
     needsSemanticRetrieval: intentList.some((intent) => ["STRATEGY", "TECHNICAL", "HISTORY", "RIVALRY", "CONTROVERSY"].includes(intent)),
-    needsWebSearch: current || intentList.some((intent) => webIntents.includes(intent)),
+    needsWebSearch: current || asksDriverCredentials || asksQualifyingRecord || intentList.some((intent) => webIntents.includes(intent)),
     needsMedia: intents.has("MEDIA"),
   });
 }
@@ -232,7 +237,11 @@ function addAliasEntities(
   aliases: readonly (readonly [string, string, readonly string[]])[],
 ): void {
   for (const [name, externalId, values] of aliases) {
-    if (values.some((value) => containsAlias(normalizedQuestion, normalize(value)))) {
+    if (values.some((value) => {
+      const normalizedAlias = normalize(value);
+      return containsAlias(normalizedQuestion, normalizedAlias)
+        || type === "DRIVER" && containsFuzzyAlias(normalizedQuestion, normalizedAlias);
+    })) {
       target.push({ type, query: name, name, externalId });
     }
   }
@@ -240,6 +249,46 @@ function addAliasEntities(
 
 function containsAlias(value: string, alias: string): boolean {
   return new RegExp(`(?:^| )${escapeRegExp(alias)}(?: |$)`).test(value);
+}
+
+function containsFuzzyAlias(value: string, alias: string): boolean {
+  const aliasWords = alias.split(" ");
+  const words = value.split(" ");
+  if (alias.replaceAll(" ", "").length < 7 || words.length < aliasWords.length) return false;
+  const maxDistance = alias.length >= 14 ? 2 : 1;
+  for (let index = 0; index <= words.length - aliasWords.length; index += 1) {
+    const candidate = words.slice(index, index + aliasWords.length).join(" ");
+    if (editDistance(candidate, alias) <= maxDistance) return true;
+  }
+  return false;
+}
+
+function editDistance(left: string, right: string): number {
+  const rows = Array.from({ length: left.length + 1 }, (_, row) => {
+    const values = Array<number>(right.length + 1).fill(0);
+    values[0] = row;
+    return values;
+  });
+  for (let column = 0; column <= right.length; column += 1) rows[0]![column] = column;
+  for (let row = 1; row <= left.length; row += 1) {
+    for (let column = 1; column <= right.length; column += 1) {
+      const substitution = left[row - 1] === right[column - 1] ? 0 : 1;
+      rows[row]![column] = Math.min(
+        rows[row - 1]![column]! + 1,
+        rows[row]![column - 1]! + 1,
+        rows[row - 1]![column - 1]! + substitution,
+      );
+      if (
+        row > 1
+        && column > 1
+        && left[row - 1] === right[column - 2]
+        && left[row - 2] === right[column - 1]
+      ) {
+        rows[row]![column] = Math.min(rows[row]![column]!, rows[row - 2]![column - 2]! + 1);
+      }
+    }
+  }
+  return rows[left.length]![right.length]!;
 }
 
 function dedupeEntities(entities: readonly F1EntityReference[]): readonly F1EntityReference[] {

@@ -48,6 +48,18 @@ const sainzCareer: ProviderDriverCareer = {
   provenance: { ...abuDhabi2021.provenance, externalId: "driver:sainz:results" },
 };
 
+const verstappenCareer: ProviderDriverCareer = {
+  ...sainzCareer,
+  driver: { externalId: "max_verstappen", givenName: "Max", familyName: "Verstappen", nationality: "Dutch" },
+  firstSeason: 2015,
+  lastSeason: 2025,
+  results: sainzCareer.results.map((result) => ({
+    ...result,
+    driver: { externalId: "max_verstappen", givenName: "Max", familyName: "Verstappen", nationality: "Dutch" },
+  })),
+  provenance: { ...sainzCareer.provenance, externalId: "driver:max_verstappen:results" },
+};
+
 function provider(overrides: Partial<HistoricalRaceProvider> = {}): HistoricalRaceProvider {
   return {
     listRaces: vi.fn(async () => [abuDhabi2021]),
@@ -126,6 +138,30 @@ describe("RaceQuestionService", () => {
     expect(result.answer).toContain("Toro Rosso");
     expect(result.sources).toEqual([expect.objectContaining({ provider: "jolpica" })]);
     expect(webRetriever.retrieveF1Web).not.toHaveBeenCalled();
+  });
+
+  it("answers a misspelled driver-credentials question instead of blocking it", async () => {
+    const historical = provider({
+      getDriverCareer: vi.fn(async (driverId) => driverId === "max_verstappen" ? verstappenCareer : null),
+    });
+    const webRetriever = {
+      retrieveF1Web: vi.fn(async () => ({
+        answer: "Max Verstappen's F1 credentials include race victories, championships, and sustained success with Red Bull Racing.",
+        sources: [{ id: "web:f1", provider: "formula1.com", title: "Max Verstappen profile", url: "https://www.formula1.com/en/drivers/max-verstappen" }],
+      })),
+    };
+    const result = await new RaceQuestionService(historical, undefined, undefined, webRetriever).ask({
+      question: "What are Max Verstapen's qualifications?",
+    });
+
+    expect(result.status).toBe("answered");
+    if (result.status !== "answered") return;
+    expect(result.answer).toContain("Max Verstappen's F1 credentials");
+    expect(result.resolvedEntities).toContainEqual(expect.objectContaining({ externalId: "max_verstappen" }));
+    expect(webRetriever.retrieveF1Web).toHaveBeenCalledWith(expect.objectContaining({
+      plan: expect.objectContaining({ needsStructuredData: true, needsWebSearch: true }),
+      structuredFacts: [expect.stringContaining("Max Verstappen")],
+    }));
   });
 
   it("calculates season-specific driver statistics without treating them as a race lookup", async () => {

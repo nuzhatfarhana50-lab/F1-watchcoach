@@ -141,7 +141,7 @@ export class F1ContextRetriever {
     const current = plan.currentness === "CURRENT" || plan.currentness === "CURRENT_AND_HISTORICAL";
     const technicalGap = plan.intents.includes("TECHNICAL") && !conceptAnswer;
     const regulationQuestion = plan.intents.includes("REGULATIONS");
-    const requiresWebSearch = current || alwaysNarrative || technicalGap || regulationQuestion || !finalAnswer;
+    const requiresWebSearch = plan.needsWebSearch || current || alwaysNarrative || technicalGap || regulationQuestion || !finalAnswer;
 
     return {
       plan,

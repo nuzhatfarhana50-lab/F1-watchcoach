@@ -177,8 +177,13 @@ export class OpenAiAdapter implements ExplanationGenerator, EmbeddingGenerator, 
 
     const annotatedSources = (outputText.annotations ?? []).flatMap((annotation) => annotation.url ? [{ url: annotation.url, title: annotation.title }] : []);
     const toolSources = parsed.data.output.flatMap((item) => item.action?.sources ?? []).map((source) => ({ url: source.url, title: undefined }));
+    // Prefer citations attached to the answer. The web-search tool can report every
+    // page it considered, which creates noisy evidence lists and may imply that an
+    // uncited page supports the final answer. Tool sources remain a safe fallback
+    // for response variants that omit output-text annotations.
+    const citedSources = annotatedSources.length > 0 ? annotatedSources : toolSources;
     const byUrl = new Map<string, RaceQuestionSource>();
-    for (const source of [...annotatedSources, ...toolSources]) {
+    for (const source of citedSources) {
       if (!isAllowedF1WebUrl(source.url, allowedDomains) || byUrl.has(source.url)) continue;
       const host = new URL(source.url).hostname.replace(/^www\./, "");
       byUrl.set(source.url, {

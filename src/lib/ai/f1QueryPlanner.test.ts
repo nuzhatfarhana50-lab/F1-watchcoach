@@ -78,4 +78,27 @@ describe("F1 query routing", () => {
     const entities = resolveF1Entities("What is CFD?", canonicalRaceFixtures, conversation);
     expect(classifyF1ScopeDeterministically("What is CFD?", entities, conversation)).toBe("F1_RELATED_CONTEXT");
   });
+
+  it("resolves a one-edit driver typo and routes credentials to structured and web evidence", () => {
+    const question = "What are Max Verstapen's qualifications?";
+    const entities = resolveF1Entities(question, canonicalRaceFixtures);
+
+    expect(entities).toContainEqual(expect.objectContaining({
+      type: "DRIVER",
+      name: "Max Verstappen",
+      externalId: "max_verstappen",
+    }));
+    expect(classifyF1ScopeDeterministically(question, entities)).toBe("F1_IN_SCOPE");
+    expect(planF1Query(question, "F1_IN_SCOPE", entities)).toMatchObject({
+      intents: expect.arrayContaining(["DRIVER_PROFILE", "STATISTICS"]),
+      needsStructuredData: true,
+      needsWebSearch: true,
+    });
+  });
+
+  it("defers unfamiliar driver-like names to the optional F1 scope classifier", () => {
+    const question = "Tell me about juan manuel fangio";
+    const entities = resolveF1Entities(question, canonicalRaceFixtures);
+    expect(classifyF1ScopeDeterministically(question, entities)).toBeNull();
+  });
 });

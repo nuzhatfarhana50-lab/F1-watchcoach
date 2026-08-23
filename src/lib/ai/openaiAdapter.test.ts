@@ -46,7 +46,15 @@ describe("OpenAiAdapter", () => {
         id: "resp_web",
         model: "gpt-5-mini",
         output: [
-          { type: "web_search_call", action: { sources: [{ type: "url", url: "https://www.formula1.com/en/latest/article/example" }] } },
+          {
+            type: "web_search_call",
+            action: {
+              sources: [
+                { type: "url", url: "https://www.formula1.com/en/latest/article/example" },
+                { type: "url", url: "https://www.formula1.com/en/latest/article/considered-but-not-cited" },
+              ],
+            },
+          },
           {
             type: "message",
             content: [{

@@ -14,6 +14,7 @@ describe("Universal F1 assistant evaluation", () => {
   it("achieves full deterministic scope recall on the representative F1 domain set", () => {
     const questions = [
       "Who is Carlos Sainz?",
+      "What are Max Verstapen's qualifications?",
       "What is Ferrari's history?",
       "Who won Monaco in 2018?",
       "How many races did Hamilton win in 2020?",
