@@ -33,7 +33,7 @@ Playwright also verifies the home and floating race-question boundaries, mascot 
 npm run eval
 ```
 
-Deterministic evaluations enforce schema/ID resolution, zero golden-set contradictions, source support, beginner clarity, Recall@5, connection integrity, and media-rights rules. A live model call is deliberately separate:
+Deterministic evaluations enforce schema/ID resolution, zero golden-set contradictions, source support, beginner clarity, Recall@5, connection integrity, media-rights rules, F1 scope recall, non-F1 rejection, intent routing, structured-before-web behavior, and citation validity. A live model call is deliberately separate:
 
 ```bash
 LIVE_OPENAI_EVALS=1 OPENAI_API_KEY=... npm run eval:live
@@ -76,28 +76,31 @@ The pages render on the server and include explicit loading, empty, unsupported-
 
 Moment detail is intentionally evidence-first. Missing telemetry is labeled, partial evidence never masquerades as a complete record, media opens only at the attributed rights holder, and related moments resolve from real repository IDs. Browsing remains public. When Clerk is configured, moment learning can be saved through an authenticated Server Action; otherwise the interface shows an explicit non-blocking unavailable state.
 
-## Home race questions
+## Formula 1 assistant
 
-The home screen includes a deliberately constrained race-question interface, not a general-purpose chatbot. The same interface is available site-wide from the floating red/white Watchcoach race-car mascot. Activating the mascot opens a compact panel, focuses its input, preserves the browser-local conversation when collapsed, and returns keyboard focus to the trigger when dismissed with Escape or the close control.
+The home screen includes a Formula 1-only knowledge assistant, not a general-purpose chatbot. The same interface is available site-wide from the floating red/white Watchcoach race-car mascot. Activating the mascot opens a compact panel, focuses its input, preserves the browser-local conversation when collapsed, and returns keyboard focus to the trigger when dismissed with Escape or the close control.
 
-Both surfaces use the same validated Server Action and grounding contract. Each question is scope-checked before provider lookup or model generation. Non-F1 prompts such as `How to make noodles?` are refused without calling Jolpica or OpenAI.
+Both surfaces use the same validated Server Action, bounded conversation-reference contract, rate limit, and grounding pipeline. Obvious non-F1 prompts such as `How do I make noodles?` are refused before Jolpica, OpenF1, web search, or answer generation runs.
 
-Questions should identify a season and a Grand Prix, circuit, country, or round. The answer path is:
+The assistant accepts questions about F1 drivers, teams, races, circuits, seasons, championships, statistics, strategy, engineering, regulations, FIA decisions, history, transfers, rivalries, controversies, media, and the sport's business. A multi-intent query is not forced into one category. Entity resolution supports common aliases such as `Checo`, `Schumi`, `Merc`, and historical team names. Follow-ups such as “Which teams has he driven for?” receive only recent resolved entity references from the browser-local conversation; factual evidence is retrieved again for every answer.
 
 ```text
 Question
-→ deterministic F1 scope check
-→ canonical race/moment lookup
-→ Jolpica calendar and result lookup when needed
-→ normalized evidence context
-→ deterministic factual answer or grounded OpenAI explanation
-→ citation-ID resolution
-→ attributed source links
+→ deterministic F1 scope and entity resolution
+→ optional scope-only model classification for genuinely ambiguous names
+→ Zod-validated multi-intent query plan
+→ structured fixtures / RaceMoments / Jolpica
+→ retrieval-sufficiency decision
+→ trusted-domain Responses web search only when needed
+→ grounded answer
+→ validated citations and attributed media links
 ```
 
-Canonical races can answer deeper moment, strategy, tyre, and concept questions from curated evidence. Other historical races use the facts available in Jolpica's normalized calendar and classification records; when those records do not establish a tactical cause, the interface says that evidence is insufficient instead of guessing. Factual result questions remain deterministic even when OpenAI is configured. Explanation-style generation is optional, uses only the retrieved context, and falls back to a sourced deterministic answer if the model is unavailable or cites an unknown source. Chat history is browser-local and is not persisted.
+Structured questions remain deterministic even when OpenAI is configured. Race winners/classifications come from normalized race results; driver career totals, wins, podiums, and constructor timelines are calculated in code from Jolpica records; canonical moment and media questions use existing Watchcoach evidence first. Narrative motives, controversies, business questions, current information, and regulation questions require retrieved external evidence. They never fall back to model memory when sources are unavailable.
 
-The public Server Action validates the 300-character input boundary and applies an ephemeral IP-hashed fixed-window limit. It never logs question text or client addresses.
+Web retrieval is centralized behind the existing OpenAI Responses adapter. Its allowlist starts with Formula1.com, FIA, and official team domains, with approved motorsport reporting and Wikidata/Wikipedia as secondary sources. Responses without a trusted citation are rejected. Historical web results cache for 24 hours; current queries cache for five minutes. Stable structured answers avoid web search entirely.
+
+The public Server Action validates a 300-character question plus at most six bounded conversation turns and applies an ephemeral IP-hashed fixed-window limit. It returns only display-safe answer, citation, media, route, and entity-reference fields. Application logging never records question text, client addresses, credentials, or provider payloads; Next.js development Server Function argument logging is also disabled because it would otherwise print prompt text.
 
 ## Authentication and learning memory
 
@@ -125,7 +128,7 @@ Workflow 4.8.3 currently brings transitive versions with published nanoid/undici
 
 ## Provider boundaries
 
-Jolpica provides calendars, identities, and historical results. OpenF1 provides supported recent sessions, laps, positions, pit stops, stints, race-control events, and optional telemetry. Vendor payloads are validated with Zod and normalized before application code sees them; typed failures distinguish invalid requests, unsupported coverage, rate limiting, service unavailability, and schema drift.
+Jolpica provides calendars, identities, historical race results, driver career-result timelines, and driver standings. OpenF1 provides supported recent sessions, laps, positions, pit stops, stints, race-control events, and optional telemetry. Vendor payloads are validated with Zod and normalized before application code sees them; typed failures distinguish invalid requests, unsupported coverage, rate limiting, service unavailability, and schema drift.
 
 The `/races` Server Component reads a requested `?season=YYYY` at request time. Jolpica is the authoritative round list from 1950 through the current season. For seasons from 2023 onward, the catalog matches non-cancelled OpenF1 Grand Prix sessions by race date and exposes whether detailed timing exists. OpenF1 Sprint sessions are deliberately excluded. Provider-only cards open an internal race record with a normalized Jolpica classification and direct provenance links; they do not pretend that a curated explanation exists.
 
@@ -178,7 +181,7 @@ Copy `.env.example` to `.env.local`. Current variables are:
 
 - `DATABASE_URL`: PostgreSQL connection string, required only for migration, seed, and database-backed application operations.
 - `LOG_LEVEL`: optional structured log threshold (`debug`, `info`, `warn`, or `error`).
-- `OPENAI_API_KEY`: optional; enables grounded explanation-style home race answers and intentional live generation/evaluation. Results and curated fallbacks work without it.
+- `OPENAI_API_KEY`: optional; enables ambiguous F1 scope classification, trusted-domain web grounding for narrative/current questions, grounded race explanations, and intentional live generation/evaluation. Structured results and curated fallbacks work without it.
 - `OPENAI_GENERATION_MODEL`: optional, defaults to `gpt-5-mini`.
 - `OPENAI_EMBEDDING_MODEL`: optional, defaults to `text-embedding-3-small`.
 - `AI_WORKFLOW_SECRET`: optional 32+ character bearer secret for the internal workflow trigger.
@@ -247,8 +250,9 @@ The five-minute cron in `vercel.json` needs Vercel Pro. Disable or change it for
 - **Live timing is unavailable:** verify `LIVE_SESSION_KEY`, Redis connectivity, and a recent successful ingestion Workflow. An expired checkpoint is labeled stale; cache loss never falls through to misleading empty data.
 - **An ingestion call returns 401/429/503:** check the bearer secret, bounded trigger rate, and Workflow/provider runtime logs respectively.
 - **AI falls back to curated content:** inspect source sufficiency, real-ID resolution, model configuration, and AI validation logs. The fallback is deliberate when grounding is inadequate.
-- **A race question is refused or asks for more context:** include a Formula 1 season and Grand Prix, circuit, country, or round. Non-F1 prompts are intentionally blocked before retrieval.
-- **A historical race answer is limited:** Jolpica may establish the calendar and classification without explaining strategy or causation. Use a canonical Watchcoach race for deeper sourced teaching, or add curated evidence rather than relying on model memory.
+- **A legitimate F1 question asks for more evidence:** configure `OPENAI_API_KEY` when the answer requires current or narrative web sources. Simple race results, driver career totals, and canonical moments remain available from structured data without it.
+- **A Formula 1 question is refused:** use a recognizable driver, team, race, circuit, season, or F1 term. Ambiguous unknown names use the optional scope-only model classifier; non-F1 prompts are intentionally blocked before retrieval.
+- **A historical race answer is limited:** Jolpica may establish the calendar and classification without explaining strategy or causation. Canonical Watchcoach races provide deeper sourced teaching; other narrative questions require trusted web evidence rather than model memory.
 - **A season catalog is unavailable:** retry the request, confirm outbound access to `api.jolpi.ca`, and inspect the structured `Race catalog provider unavailable` log. Verified Watchcoach races remain available as fallback; OpenF1 failure removes only the timing-coverage indicator.
 - **Clerk sign-in works but saving fails:** verify `DATABASE_URL`, the Phase 5 migration, and that both Clerk keys belong to the same instance. Domain learning data belongs in PostgreSQL, not Clerk metadata.
 - **Playwright cannot find Chromium:** run `npx playwright install chromium`, then retry `npm run test:e2e`.

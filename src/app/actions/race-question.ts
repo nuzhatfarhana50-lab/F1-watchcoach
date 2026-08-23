@@ -18,17 +18,17 @@ export async function askRaceQuestionAction(input: unknown): Promise<RaceQuestio
       ?? "anonymous";
     const rateLimitKey = createHash("sha256").update(forwardedAddress).digest("hex");
     if (!raceQuestionRateLimiter.allow(rateLimitKey)) {
-      return { status: "unavailable", message: "Too many race questions at once. Wait a minute, then try again." };
+      return { status: "unavailable", message: "Too many F1 questions at once. Wait a minute, then try again." };
     }
     return await raceQuestionService.ask(input);
   } catch (error) {
-    logger.error("Race question failed", {
-      action: "ask-race-question",
+    logger.error("F1 assistant question failed", {
+      action: "ask-f1-question",
       errorName: error instanceof Error ? error.name : "UnknownError",
     });
     return {
       status: "unavailable",
-      message: "Race answers are temporarily unavailable. The race library is still ready to browse.",
+      message: "F1 answers are temporarily unavailable. The race library is still ready to browse.",
     };
   }
 }

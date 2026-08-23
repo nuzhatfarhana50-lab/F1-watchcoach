@@ -14,4 +14,10 @@ const generator = serverEnvironment.OPENAI_API_KEY
     )
   : undefined;
 
-export const raceQuestionService = new RaceQuestionService(f1Providers.historical, generator);
+export const raceQuestionService = new RaceQuestionService(
+  f1Providers.historical,
+  generator,
+  undefined,
+  generator,
+  generator,
+);

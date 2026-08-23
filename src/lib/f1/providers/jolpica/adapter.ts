@@ -2,13 +2,15 @@ import { z } from "zod";
 
 import type {
   HistoricalRaceProvider,
+  ProviderDriverCareer,
+  ProviderDriverStanding,
   ProviderProvenance,
   ProviderRaceResult,
   ProviderRaceSummary,
 } from "../contracts";
 import { ProviderFailure } from "../errors";
 import type { ProviderRequestClient, ProviderResponse } from "../requestClient";
-import { jolpicaRaceResponseSchema, type JolpicaRace } from "./schemas";
+import { jolpicaDriverStandingsResponseSchema, jolpicaRaceResponseSchema, type JolpicaRace } from "./schemas";
 
 const HISTORICAL_TTL_MS = 24 * 60 * 60 * 1_000;
 
@@ -58,6 +60,95 @@ export class JolpicaAdapter implements HistoricalRaceProvider {
         provenance,
       })),
     };
+  }
+
+  async getDriverCareer(driverExternalId: string): Promise<ProviderDriverCareer | null> {
+    if (!/^[a-z0-9_-]+$/i.test(driverExternalId)) {
+      throw new ProviderFailure("invalidRequest", "jolpica", "Driver identifier is invalid");
+    }
+    const response = await this.get(`drivers/${encodeURIComponent(driverExternalId)}/results.json?limit=2000`);
+    const races = this.parse(response).MRData.RaceTable.Races;
+    const results = races.flatMap((race) => (race.Results ?? []).map((result) => {
+      const provenance = this.provenance(race, response);
+      return {
+        season: Number(race.season),
+        round: Number(race.round),
+        raceName: race.raceName,
+        raceDate: race.date,
+        position: result.position ? Number(result.position) : undefined,
+        gridPosition: Number(result.grid),
+        lapsCompleted: Number(result.laps),
+        points: Number(result.points),
+        status: result.status,
+        driver: {
+          externalId: result.Driver.driverId,
+          givenName: result.Driver.givenName,
+          familyName: result.Driver.familyName,
+          code: result.Driver.code,
+          permanentNumber: result.Driver.permanentNumber ? Number(result.Driver.permanentNumber) : undefined,
+          nationality: result.Driver.nationality,
+        },
+        team: {
+          externalId: result.Constructor.constructorId,
+          name: result.Constructor.name,
+          nationality: result.Constructor.nationality,
+        },
+        provenance,
+      };
+    }));
+    const first = results[0];
+    const last = results.at(-1);
+    if (!first || !last) return null;
+    return {
+      driver: first.driver,
+      firstSeason: Math.min(...results.map((result) => result.season)),
+      lastSeason: Math.max(...results.map((result) => result.season)),
+      starts: results.length,
+      wins: results.filter((result) => result.position === 1).length,
+      podiums: results.filter((result) => result.position !== undefined && result.position <= 3).length,
+      results,
+      provenance: {
+        provider: "jolpica",
+        externalId: `driver:${first.driver.externalId}:results`,
+        sourceUrl: response.sourceUrl,
+        fetchedAt: response.fetchedAt,
+      },
+    };
+  }
+
+  async getDriverStandings(season: number): Promise<readonly ProviderDriverStanding[]> {
+    this.assertSeason(season);
+    const response = await this.get(`${season}/driverstandings.json?limit=100`);
+    const parsed = jolpicaDriverStandingsResponseSchema.safeParse(response.data);
+    if (!parsed.success) {
+      throw new ProviderFailure("schemaDrift", "jolpica", "Jolpica standings response did not match the expected contract", {
+        sourceUrl: response.sourceUrl,
+        issueCount: parsed.error.issues.length,
+      });
+    }
+    const standings = parsed.data.MRData.StandingsTable.StandingsLists[0];
+    if (!standings) return [];
+    return standings.DriverStandings.map((standing) => ({
+      season: Number(standings.season),
+      position: Number(standing.position),
+      points: Number(standing.points),
+      wins: Number(standing.wins),
+      driver: {
+        externalId: standing.Driver.driverId,
+        givenName: standing.Driver.givenName,
+        familyName: standing.Driver.familyName,
+        code: standing.Driver.code,
+        permanentNumber: standing.Driver.permanentNumber ? Number(standing.Driver.permanentNumber) : undefined,
+        nationality: standing.Driver.nationality,
+      },
+      teams: standing.Constructors.map((team) => ({ externalId: team.constructorId, name: team.name, nationality: team.nationality })),
+      provenance: {
+        provider: "jolpica",
+        externalId: `${standings.season}:driver-standing:${standing.position}`,
+        sourceUrl: response.sourceUrl,
+        fetchedAt: response.fetchedAt,
+      },
+    }));
   }
 
   private async get(path: string): Promise<ProviderResponse> {

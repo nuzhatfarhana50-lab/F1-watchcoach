@@ -49,4 +49,21 @@ export const jolpicaRaceResponseSchema = z.object({
   }).passthrough(),
 }).passthrough();
 
+export const jolpicaDriverStandingsResponseSchema = z.object({
+  MRData: z.object({
+    StandingsTable: z.object({
+      StandingsLists: z.array(z.object({
+        season: z.string().regex(/^\d{4}$/),
+        DriverStandings: z.array(z.object({
+          position: z.string().regex(/^\d+$/),
+          points: z.string(),
+          wins: z.string().regex(/^\d+$/),
+          Driver: driverSchema,
+          Constructors: z.array(constructorSchema),
+        }).passthrough()),
+      }).passthrough()),
+    }).passthrough(),
+  }).passthrough(),
+}).passthrough();
+
 export type JolpicaRace = z.infer<typeof raceSchema>;

@@ -14,23 +14,23 @@ type ChatEntry = {
 };
 
 const suggestions = [
-  "Who won the 2024 British Grand Prix?",
+  "Who is Carlos Sainz?",
+  "What is an undercut?",
   "Why did Hamilton’s final stop matter at the 2024 British Grand Prix?",
-  "What happened when rain arrived at the 2023 Dutch Grand Prix?",
 ] as const;
 
 export function RaceQuestionChat() {
   return (
     <section className="race-chat-section" aria-labelledby="race-chat-title">
       <div className="race-chat-intro">
-        <p className="section-label">Race data, on demand</p>
-        <h2 id="race-chat-title">Ask about an F1 race.</h2>
+        <p className="section-label">F1 knowledge, on demand</p>
+        <h2 id="race-chat-title">Ask Watchcoach about Formula 1.</h2>
         <p>
-          Name the season and Grand Prix. Answers stay inside curated F1 Watchcoach evidence and connected F1 race records.
+          Ask about drivers, teams, races, history, strategy, engineering, regulations, or the business of Formula 1.
         </p>
         <div className="race-chat-boundary" aria-label="Question scope">
           <span aria-hidden="true">✓</span>
-          Race results, moments, strategy, drivers, circuits, and classifications
+          Drivers, teams, races, history, strategy, engineering, regulations, and F1 business
         </div>
         <div className="race-chat-boundary race-chat-boundary-blocked">
           <span aria-hidden="true">×</span>
@@ -61,8 +61,14 @@ export function RaceQuestionChatPanel({
     setMessages((current) => [...current.slice(-6), userEntry]);
     if (inputRef.current) inputRef.current.value = "";
 
+    const conversation = messages.slice(-6).map((message) => ({
+      role: message.role,
+      text: message.text,
+      entities: message.response?.status === "answered" ? message.response.resolvedEntities : [],
+    }));
+
     startTransition(async () => {
-      const response = await askRaceQuestionAction({ question: trimmed });
+      const response = await askRaceQuestionAction({ question: trimmed, conversation });
       const text = response.status === "answered" ? response.answer : response.message;
       const assistantEntry: ChatEntry = { id: crypto.randomUUID(), role: "assistant", text, response };
       setMessages((current) => [...current, assistantEntry].slice(-8));
@@ -84,11 +90,11 @@ export function RaceQuestionChatPanel({
         ) : null}
       </div>
 
-      <div className="race-chat-log" role="log" aria-live="polite" aria-label="Race question conversation">
+      <div className="race-chat-log" role="log" aria-live="polite" aria-label="F1 question conversation">
         {messages.length === 0 ? (
           <div className="race-chat-empty">
-            <strong>Start with a precise race question</strong>
-            <p>I’ll retrieve the race record first, then answer only from that evidence.</p>
+            <strong>Ask a Formula 1 question</strong>
+            <p>I’ll route it to connected F1 evidence, then answer only from what the sources establish.</p>
           </div>
         ) : messages.map((message) => (
           <article className={`race-chat-message race-chat-message-${message.role}`} key={message.id}>
@@ -105,19 +111,28 @@ export function RaceQuestionChatPanel({
                   ))}
                 </ul>
                 {message.response.raceHref ? <Link href={message.response.raceHref}>Open the race moments →</Link> : null}
+                {message.response.media.length > 0 ? (
+                  <ul aria-label="Related F1 media">
+                    {message.response.media.map((item) => (
+                      <li key={item.id}>
+                        <a href={item.url} target="_blank" rel="noreferrer">{item.title} ({item.attribution})</a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </div>
             ) : null}
           </article>
         ))}
         {pending ? (
           <div className="race-chat-thinking" role="status">
-            <span aria-hidden="true" /> Retrieving F1 race evidence…
+            <span aria-hidden="true" /> Retrieving F1 evidence…
           </div>
         ) : null}
       </div>
 
       <form className="race-chat-form" onSubmit={handleSubmit}>
-        <label htmlFor={`${idPrefix}-question`}>Ask a race question</label>
+        <label htmlFor={`${idPrefix}-question`}>Ask an F1 question</label>
         <div>
           <input
             id={`${idPrefix}-question`}
@@ -127,7 +142,7 @@ export function RaceQuestionChatPanel({
             minLength={3}
             maxLength={300}
             autoComplete="off"
-            placeholder="Who won the 2021 Abu Dhabi Grand Prix?"
+            placeholder="Who is Carlos Sainz?"
             disabled={pending}
             required
           />
@@ -135,7 +150,7 @@ export function RaceQuestionChatPanel({
         </div>
       </form>
 
-      <div className="race-chat-suggestions" aria-label="Suggested race questions">
+      <div className="race-chat-suggestions" aria-label="Suggested F1 questions">
         {suggestions.map((suggestion) => (
           <button key={suggestion} type="button" onClick={() => submitQuestion(suggestion)} disabled={pending}>
             {suggestion}

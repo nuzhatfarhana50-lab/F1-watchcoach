@@ -45,11 +45,11 @@ export function FloatingRaceChat() {
         <header className="floating-race-chat-heading">
           <div>
             <p>Watchcoach</p>
-            <h2 id="floating-race-chat-title">Ask about an F1 race</h2>
+            <h2 id="floating-race-chat-title">Ask about Formula 1</h2>
           </div>
           <button type="button" onClick={closePanel} aria-label="Close Watchcoach chat">×</button>
         </header>
-        <p className="floating-race-chat-scope">Grounded in connected race records. Non-F1 questions are blocked.</p>
+        <p className="floating-race-chat-scope">Grounded in connected F1 sources. Non-F1 questions are blocked.</p>
         <RaceQuestionChatPanel idPrefix="floating-race-chat" compact />
       </aside>
 
@@ -59,7 +59,7 @@ export function FloatingRaceChat() {
         ref={triggerRef}
         aria-expanded={open}
         aria-controls={panelId}
-        aria-label={open ? "Close Watchcoach race assistant" : "Open Watchcoach race assistant"}
+        aria-label={open ? "Close Watchcoach F1 assistant" : "Open Watchcoach F1 assistant"}
         onClick={open ? closePanel : openPanel}
       >
         <span className="floating-race-chat-callout" aria-hidden="true">Ask Watchcoach</span>
@@ -69,6 +69,7 @@ export function FloatingRaceChat() {
           width={112}
           height={112}
           sizes="112px"
+          loading="eager"
         />
         <span className="floating-race-chat-status" aria-hidden="true">F1</span>
       </button>

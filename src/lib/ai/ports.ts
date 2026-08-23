@@ -1,5 +1,11 @@
 import type { GroundedExplanation, GroundingContext } from "./schemas";
-import type { RaceQuestionContext } from "./raceQuestionSchemas";
+import type {
+  F1ConversationTurn,
+  F1QueryPlan,
+  F1Scope,
+  RaceQuestionContext,
+  RaceQuestionSource,
+} from "./raceQuestionSchemas";
 
 export type GenerationMetadata = {
   generationId: string;
@@ -26,6 +32,18 @@ export interface ConnectionGenerator {
 
 export interface RaceQuestionGenerator {
   answerRaceQuestion(context: RaceQuestionContext): Promise<unknown>;
+}
+
+export interface F1ScopeClassifier {
+  classifyF1Scope(question: string, conversation: readonly F1ConversationTurn[]): Promise<F1Scope>;
+}
+
+export interface F1WebRetriever {
+  retrieveF1Web(input: {
+    question: string;
+    plan: F1QueryPlan;
+    structuredFacts: readonly string[];
+  }): Promise<{ answer: string; sources: readonly RaceQuestionSource[] }>;
 }
 
 export interface GroundingRetriever {

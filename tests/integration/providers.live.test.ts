@@ -15,6 +15,17 @@ describe.skipIf(!live)("live F1 provider smoke checks", () => {
     expect(result?.results.length).toBeGreaterThan(0);
   });
 
+  it("reads structured Jolpica driver-career and championship records", async () => {
+    const adapter = new JolpicaAdapter(client);
+    const [career, standings] = await Promise.all([
+      adapter.getDriverCareer("sainz"),
+      adapter.getDriverStandings(2012),
+    ]);
+    expect(career?.driver.familyName).toBe("Sainz");
+    expect(career?.results.length).toBeGreaterThan(0);
+    expect(standings[0]?.driver.externalId).toBe("vettel");
+  });
+
   it("finds OpenF1 race sessions for a supported season", async () => {
     const sessions = await new OpenF1Adapter(client).findRaceSessions(2024);
     expect(sessions).toHaveLength(24);

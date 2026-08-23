@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import { askRaceQuestionAction } from "@/app/actions/race-question";
+
 import { RaceQuestionChat } from "./race-question-chat";
 
 vi.mock("@/app/actions/race-question", () => ({
@@ -9,8 +11,12 @@ vi.mock("@/app/actions/race-question", () => ({
     ? { status: "blocked", message: "I can only answer questions about Formula 1 races using the connected F1 data sources." }
     : {
         status: "answered",
-        answer: "Lewis Hamilton won the 2024 British Grand Prix.",
+        answer: question.includes("Carlos") ? "Carlos Sainz is a Spanish Formula 1 driver." : "Lewis Hamilton won the 2024 British Grand Prix.",
         sources: [{ id: "source-1", provider: "fia", title: "Official race report", url: "https://www.fia.com/example" }],
+        media: [],
+        resolvedEntities: question.includes("Carlos")
+          ? [{ type: "DRIVER", query: "Carlos Sainz", name: "Carlos Sainz", externalId: "sainz" }]
+          : [{ type: "RACE", query: "British Grand Prix", name: "2024 British Grand Prix" }],
         raceHref: "/races/2024/12",
         generated: false,
       }),
@@ -22,7 +28,7 @@ describe("RaceQuestionChat", () => {
     render(<RaceQuestionChat />);
 
     expect(screen.getByText("F1 sources only")).toBeVisible();
-    await user.type(screen.getByLabelText("Ask a race question"), "Who won the 2024 British Grand Prix?");
+    await user.type(screen.getByLabelText("Ask an F1 question"), "Who won the 2024 British Grand Prix?");
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
     expect(await screen.findByText("Lewis Hamilton won the 2024 British Grand Prix.")).toBeVisible();
@@ -34,10 +40,31 @@ describe("RaceQuestionChat", () => {
     const user = userEvent.setup();
     render(<RaceQuestionChat />);
 
-    await user.type(screen.getByLabelText("Ask a race question"), "How to make noodles?");
+    await user.type(screen.getByLabelText("Ask an F1 question"), "How to make noodles?");
     await user.click(screen.getByRole("button", { name: "Ask" }));
 
     expect(await screen.findByText(/I can only answer questions about Formula 1 races/)).toBeVisible();
     expect(screen.queryByText("Evidence")).not.toBeInTheDocument();
+  });
+
+  it("sends bounded resolved-entity context with a follow-up", async () => {
+    const user = userEvent.setup();
+    render(<RaceQuestionChat />);
+    const input = screen.getByLabelText("Ask an F1 question");
+
+    await user.type(input, "Who is Carlos Sainz?");
+    await user.click(screen.getByRole("button", { name: "Ask" }));
+    expect(await screen.findByText("Carlos Sainz is a Spanish Formula 1 driver.")).toBeVisible();
+
+    await user.type(input, "Which teams has he driven for?");
+    await user.click(screen.getByRole("button", { name: "Ask" }));
+
+    expect(vi.mocked(askRaceQuestionAction)).toHaveBeenLastCalledWith(expect.objectContaining({
+      question: "Which teams has he driven for?",
+      conversation: expect.arrayContaining([expect.objectContaining({
+        role: "assistant",
+        entities: [expect.objectContaining({ type: "DRIVER", externalId: "sainz" })],
+      })]),
+    }));
   });
 });

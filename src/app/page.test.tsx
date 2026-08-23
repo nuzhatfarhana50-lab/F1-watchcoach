@@ -17,8 +17,8 @@ describe("home page", () => {
     expect(screen.getByText("Watch", { selector: "strong" })).toBeVisible();
     expect(screen.getByText("Learn", { selector: "strong" })).toBeVisible();
     expect(screen.getByText("Connect", { selector: "strong" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Ask about an F1 race." })).toBeVisible();
-    expect(screen.getByLabelText("Ask a race question")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Ask Watchcoach about Formula 1." })).toBeVisible();
+    expect(screen.getByLabelText("Ask an F1 question")).toBeVisible();
     expect(screen.getByRole("link", { name: "Browse the race library" })).toHaveAttribute("href", "/races");
   });
 });

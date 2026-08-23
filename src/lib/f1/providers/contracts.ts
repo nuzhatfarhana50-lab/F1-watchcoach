@@ -55,6 +55,34 @@ export type ProviderRaceResult = {
   results: readonly ProviderResult[];
 };
 
+export type ProviderDriverCareerResult = ProviderResult & {
+  season: number;
+  round: number;
+  raceName: string;
+  raceDate: string;
+};
+
+export type ProviderDriverCareer = {
+  driver: ProviderDriver;
+  firstSeason: number;
+  lastSeason: number;
+  starts: number;
+  wins: number;
+  podiums: number;
+  results: readonly ProviderDriverCareerResult[];
+  provenance: ProviderProvenance;
+};
+
+export type ProviderDriverStanding = {
+  season: number;
+  position: number;
+  points: number;
+  wins: number;
+  driver: ProviderDriver;
+  teams: readonly ProviderTeam[];
+  provenance: ProviderProvenance;
+};
+
 export type OpenF1Session = {
   meetingKey: number;
   sessionKey: number;
@@ -135,6 +163,8 @@ export type OpenF1SessionEvidence = {
 export interface HistoricalRaceProvider {
   listRaces(season: number): Promise<readonly ProviderRaceSummary[]>;
   getRaceResult(season: number, round: number): Promise<ProviderRaceResult | null>;
+  getDriverCareer?(driverExternalId: string): Promise<ProviderDriverCareer | null>;
+  getDriverStandings?(season: number): Promise<readonly ProviderDriverStanding[]>;
 }
 
 export interface RecentSessionProvider {
