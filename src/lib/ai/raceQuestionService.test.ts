@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { HistoricalRaceProvider, ProviderDriverCareer, ProviderRaceResult, ProviderRaceSummary } from "@/lib/f1/providers/contracts";
 
+import { AiGenerationError } from "./errors";
 import { raceQuestionLimits } from "./raceQuestionLimits";
 import { RaceQuestionService } from "./raceQuestionService";
 
@@ -60,6 +61,20 @@ const verstappenCareer: ProviderDriverCareer = {
   provenance: { ...sainzCareer.provenance, externalId: "driver:max_verstappen:results" },
 };
 
+const stewartCareer: ProviderDriverCareer = {
+  ...sainzCareer,
+  driver: { externalId: "stewart", givenName: "Jackie", familyName: "Stewart", nationality: "British" },
+  firstSeason: 1965,
+  lastSeason: 1973,
+  results: sainzCareer.results.map((result, index) => ({
+    ...result,
+    season: 1965 + index,
+    driver: { externalId: "stewart", givenName: "Jackie", familyName: "Stewart", nationality: "British" },
+    team: { externalId: "tyrrell", name: "Tyrrell", nationality: "British" },
+  })),
+  provenance: { ...sainzCareer.provenance, externalId: "driver:stewart:results" },
+};
+
 function provider(overrides: Partial<HistoricalRaceProvider> = {}): HistoricalRaceProvider {
   return {
     listRaces: vi.fn(async () => [abuDhabi2021]),
@@ -71,13 +86,14 @@ function provider(overrides: Partial<HistoricalRaceProvider> = {}): HistoricalRa
 
 describe("RaceQuestionService", () => {
   it("blocks non-F1 open-ended questions before retrieval or generation", async () => {
-    const historical = provider();
+    const historical = provider({ listDrivers: vi.fn(async () => []) });
     const generator = { answerRaceQuestion: vi.fn() };
     const result = await new RaceQuestionService(historical, generator).ask({ question: "How to make noodles?" });
 
     expect(result.status).toBe("blocked");
     expect(historical.listRaces).not.toHaveBeenCalled();
     expect(historical.getRaceResult).not.toHaveBeenCalled();
+    expect(historical.listDrivers).not.toHaveBeenCalled();
     expect(generator.answerRaceQuestion).not.toHaveBeenCalled();
   });
 
@@ -106,6 +122,25 @@ describe("RaceQuestionService", () => {
     expect(result.answer).toContain("Max Verstappen won");
     expect(result.sources).toEqual([expect.objectContaining({ provider: "jolpica" })]);
     expect(result.raceHref).toBeUndefined();
+  });
+
+  it("continues from a structured race record to cited web evidence for unsupported causal detail", async () => {
+    const webRetriever = {
+      retrieveF1Web: vi.fn(async () => ({
+        answer: "The late Safety Car and restart sequence changed the race outcome; the cited report establishes the decisive context.",
+        sources: [{ id: "web:f1", provider: "formula1.com", title: "Abu Dhabi race report", url: "https://www.formula1.com/en/latest/article/example" }],
+      })),
+    };
+    const result = await new RaceQuestionService(provider(), undefined, undefined, webRetriever).ask({
+      question: "Why did Max Verstappen win the 2021 Abu Dhabi Grand Prix?",
+    });
+
+    expect(result.status).toBe("answered");
+    if (result.status !== "answered") return;
+    expect(result.answer).toContain("Safety Car");
+    expect(webRetriever.retrieveF1Web).toHaveBeenCalledWith(expect.objectContaining({
+      structuredFacts: [expect.stringContaining("2021 Abu Dhabi Grand Prix")],
+    }));
   });
 
   it("rejects invented model citations and falls back to deterministic evidence", async () => {
@@ -164,6 +199,50 @@ describe("RaceQuestionService", () => {
     }));
   });
 
+  it("resolves an uncurated historical driver through the Jolpica directory", async () => {
+    const historical = provider({
+      listDrivers: vi.fn(async () => [
+        { externalId: "fangio", givenName: "Juan Manuel", familyName: "Fangio", nationality: "Argentine" },
+        { externalId: "stewart", givenName: "Jackie", familyName: "Stewart", nationality: "British" },
+      ]),
+      getDriverCareer: vi.fn(async (driverId) => driverId === "stewart" ? stewartCareer : null),
+    });
+    const webRetriever = { retrieveF1Web: vi.fn() };
+    const result = await new RaceQuestionService(historical, undefined, undefined, webRetriever).ask({
+      question: "Who was Jackie Stewart?",
+    });
+
+    expect(result.status).toBe("answered");
+    if (result.status !== "answered") return;
+    expect(result.answer).toContain("Jackie Stewart");
+    expect(result.answer).toContain("1965–1973");
+    expect(result.sources).toEqual([expect.objectContaining({ provider: "jolpica" })]);
+    expect(result.resolvedEntities).toContainEqual(expect.objectContaining({ externalId: "stewart" }));
+    expect(historical.listDrivers).toHaveBeenCalledOnce();
+    expect(historical.getDriverCareer).toHaveBeenCalledWith("stewart");
+    expect(webRetriever.retrieveF1Web).not.toHaveBeenCalled();
+  });
+
+  it("uses cited web evidence for driver statistics that race results cannot derive", async () => {
+    const webRetriever = {
+      retrieveF1Web: vi.fn(async () => ({
+        answer: "Carlos Sainz has not won the Formula 1 Drivers' Championship; the cited profile and championship record establish that result.",
+        sources: [{ id: "web:f1", provider: "formula1.com", title: "Carlos Sainz profile", url: "https://www.formula1.com/en/drivers/carlos-sainz" }],
+      })),
+    };
+    const result = await new RaceQuestionService(provider(), undefined, undefined, webRetriever).ask({
+      question: "How many Formula 1 championships has Carlos Sainz won?",
+    });
+
+    expect(result.status).toBe("answered");
+    if (result.status !== "answered") return;
+    expect(result.answer).toContain("has not won");
+    expect(webRetriever.retrieveF1Web).toHaveBeenCalledWith(expect.objectContaining({
+      structuredFacts: [expect.stringContaining("Carlos Sainz")],
+      plan: expect.objectContaining({ needsWebSearch: true }),
+    }));
+  });
+
   it("calculates season-specific driver statistics without treating them as a race lookup", async () => {
     const historical = provider();
     const result = await new RaceQuestionService(historical).ask({ question: "How many races did Carlos Sainz win in 2024?" });
@@ -211,6 +290,22 @@ describe("RaceQuestionService", () => {
     expect(result.answer.length).toBeLessThanOrEqual(raceQuestionLimits.answerCharacters);
     expect(result.answer).toMatch(/…$/);
     expect(result.answer).not.toContain("This should not survive");
+  });
+
+  it("reports a trusted-web timeout as temporary unavailability instead of insufficient evidence", async () => {
+    const webRetriever = {
+      retrieveF1Web: vi.fn(async () => {
+        throw new AiGenerationError("unavailable", "OpenAI request timed out");
+      }),
+    };
+    const result = await new RaceQuestionService(provider(), undefined, undefined, webRetriever).ask({
+      question: "Why was the 2008 Singapore Grand Prix controversial?",
+    });
+
+    expect(result).toEqual({
+      status: "unavailable",
+      message: "Trusted F1 web search or a connected data provider is temporarily unavailable. Try that Formula 1 question again shortly.",
+    });
   });
 
   it("uses conversation entity references for a follow-up without guessing from answer text", async () => {

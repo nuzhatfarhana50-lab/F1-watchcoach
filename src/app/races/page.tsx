@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { z } from "zod";
 
 import { ProviderUnavailable } from "@/app/_components/library-states";
@@ -28,6 +29,22 @@ export default async function RacesPage({ searchParams }: RacesPageProps) {
   const rawSeason = (await searchParams).season;
   const parsedSeason = seasonSchema.safeParse(Array.isArray(rawSeason) ? rawSeason[0] : rawSeason);
   const selectedSeason = parsedSeason.success ? parsedSeason.data : currentSeason;
+
+  return (
+    <PageFrame>
+      <section className="page-heading" aria-labelledby="race-library-title">
+        <p className="eyebrow">Race collection</p>
+        <h1 id="race-library-title">Every season. Real race records.</h1>
+        <p>Jolpica supplies the historical and current calendar. OpenF1 marks races with detailed session and timing coverage, while curated Watchcoach races add evidence-led learning moments.</p>
+      </section>
+      <Suspense fallback={<CatalogLoading selectedSeason={selectedSeason} />}>
+        <SeasonCatalog selectedSeason={selectedSeason} />
+      </Suspense>
+    </PageFrame>
+  );
+}
+
+async function SeasonCatalog({ selectedSeason }: { selectedSeason: number }) {
   const [catalog, curatedRaces] = await Promise.all([
     (await getRaceCatalogService()).listSeason(selectedSeason),
     (await getRaceLibraryService()).listRaces(),
@@ -43,13 +60,7 @@ export default async function RacesPage({ searchParams }: RacesPageProps) {
   const additionalLearningRaces = curatedRaces.filter((race) => race.season !== selectedSeason);
 
   return (
-    <PageFrame>
-      <section className="page-heading" aria-labelledby="race-library-title">
-        <p className="eyebrow">Race collection</p>
-        <h1 id="race-library-title">Every season. Real race records.</h1>
-        <p>Jolpica supplies the historical and current calendar. OpenF1 marks races with detailed session and timing coverage, while curated Watchcoach races add evidence-led learning moments.</p>
-      </section>
-
+    <>
       <section className="catalog-controls" aria-labelledby="season-browser-title">
         <div>
           <p className="section-label">Season browser</p>
@@ -93,7 +104,19 @@ export default async function RacesPage({ searchParams }: RacesPageProps) {
           </div>
         </section>
       ) : null}
-    </PageFrame>
+    </>
+  );
+}
+
+function CatalogLoading({ selectedSeason }: { selectedSeason: number }) {
+  return (
+    <section className="catalog-controls" aria-labelledby="season-browser-loading-title" aria-busy="true">
+      <div>
+        <p className="section-label">Season browser</p>
+        <h2 id="season-browser-loading-title">{selectedSeason} Formula 1 season</h2>
+        <p role="status">Loading provider-backed race records…</p>
+      </div>
+    </section>
   );
 }
 

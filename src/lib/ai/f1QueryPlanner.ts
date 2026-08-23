@@ -1,4 +1,5 @@
 import type { RaceFixtureCollection } from "@/lib/f1/domain/types";
+import type { ProviderDriver } from "@/lib/f1/providers/contracts";
 
 import {
   f1QueryPlanSchema,
@@ -15,6 +16,8 @@ const PRONOUN_PATTERN = /\b(he|him|his|she|her|they|them|their|that driver|that 
 const EXPLICIT_OUT_OF_SCOPE_PATTERN = /\b(make (?:me )?(?:noodles|pasta|rice)|recipe|python|javascript|sorting an array|capital of|nba|nfl|cricket|investment advice|stock tips|road[- ]car automatic gearbox|favorite food|favourite food|entire oil business|other cars does pirelli)\b/i;
 const DRIVER_CREDENTIAL_PATTERN = /\b(qualifications?|credentials?|achievements?|accomplishments?|honou?rs?)\b/i;
 const QUALIFYING_RECORD_PATTERN = /\b(qualifying|qualification results?|pole positions?|poles?)\b/i;
+const UNSUPPORTED_CAREER_STAT_PATTERN = /\b(championships?|world titles?|drivers['’]? titles?|fastest laps?|dnfs?|retirements?|career points?)\b/i;
+const DRIVER_DIRECTORY_CUE_PATTERN = /\b(who (?:is|was)|tell me about|drivers?|career|debut|drove|drive for|teammates?|wins?|victor(?:y|ies)|podiums?|poles?|qualifying|championships?|achievements?|credentials?|qualifications?|born|nationality|history)\b/i;
 
 const DRIVER_ALIASES = [
   ["Carlos Sainz", "sainz", ["carlos sainz", "carlos", "sainz"]],
@@ -146,6 +149,40 @@ export function resolveF1Entities(
   return dedupeEntities(entities);
 }
 
+export function shouldResolveDriverDirectory(
+  question: string,
+  entities: readonly F1EntityReference[],
+): boolean {
+  if (entities.some((entity) => entity.type === "DRIVER") || EXPLICIT_OUT_OF_SCOPE_PATTERN.test(question)) return false;
+  if (!DRIVER_DIRECTORY_CUE_PATTERN.test(question)) return false;
+  const hasNonDriverEntity = entities.some((entity) => ["TEAM", "RACE", "CIRCUIT", "CONCEPT"].includes(entity.type));
+  const explicitlyAboutDriver = /\b(driver|career|debut|drove|drive for|teammate|born|nationality|achievements?|credentials?|qualifications?)\b/i.test(question);
+  return !hasNonDriverEntity || explicitlyAboutDriver;
+}
+
+export function resolveProviderDriverEntities(
+  question: string,
+  drivers: readonly ProviderDriver[],
+): readonly F1EntityReference[] {
+  const normalizedQuestion = normalize(question);
+  const exactFull = drivers.filter((driver) => containsAlias(normalizedQuestion, normalize(`${driver.givenName} ${driver.familyName}`)));
+  if (exactFull.length > 0) return exactFull.map(providerDriverEntity);
+
+  const exactFamily = drivers.filter((driver) => {
+    const familyName = normalize(driver.familyName);
+    return familyName.length >= 5 && containsAlias(normalizedQuestion, familyName);
+  });
+  if (exactFamily.length === 1) return exactFamily.map(providerDriverEntity);
+
+  const fuzzy = drivers.filter((driver) => {
+    const fullName = normalize(`${driver.givenName} ${driver.familyName}`);
+    const familyName = normalize(driver.familyName);
+    return containsFuzzyAlias(normalizedQuestion, fullName)
+      || familyName.length >= 6 && containsFuzzyAlias(normalizedQuestion, familyName);
+  });
+  return fuzzy.length <= 2 ? fuzzy.map(providerDriverEntity) : [];
+}
+
 export function classifyF1ScopeDeterministically(
   question: string,
   entities: readonly F1EntityReference[],
@@ -175,9 +212,10 @@ export function planF1Query(
   const hasTeam = entities.some((entity) => entity.type === "TEAM");
   const asksDriverCredentials = hasDriver && DRIVER_CREDENTIAL_PATTERN.test(question);
   const asksQualifyingRecord = hasDriver && QUALIFYING_RECORD_PATTERN.test(question);
+  const asksUnsupportedCareerStatistic = hasDriver && UNSUPPORTED_CAREER_STAT_PATTERN.test(question);
 
   if ((/\b(who is|who was|tell me about)\b/i.test(question) && hasDriver) || asksDriverCredentials) intents.add("DRIVER_PROFILE");
-  if (/\b(career|teams? (?:has|did)|drive for|drove for|first (?:f1 )?team|teammate|joined)\b/i.test(question)) intents.add("DRIVER_CAREER");
+  if (hasDriver && /\b(career|history|teams? (?:has|did)|drive for|drove for|first (?:f1 )?team|teammate|joined)\b/i.test(question)) intents.add("DRIVER_CAREER");
   if (/\b(leave|left|move|moved|join|joined|transfer|contract|replace(?:d)?)\b/i.test(question) && hasDriver) {
     intents.add("DRIVER_TRANSFER");
     intents.add("DRIVER_CAREER");
@@ -225,7 +263,8 @@ export function planF1Query(
     ].includes(intent)),
     needsRaceMoments: intentList.some((intent) => ["RACE_MOMENT", "MEDIA"].includes(intent)),
     needsSemanticRetrieval: intentList.some((intent) => ["STRATEGY", "TECHNICAL", "HISTORY", "RIVALRY", "CONTROVERSY"].includes(intent)),
-    needsWebSearch: current || asksDriverCredentials || asksQualifyingRecord || intentList.some((intent) => webIntents.includes(intent)),
+    needsWebSearch: current || asksDriverCredentials || asksQualifyingRecord || asksUnsupportedCareerStatistic
+      || intentList.some((intent) => webIntents.includes(intent)),
     needsMedia: intents.has("MEDIA"),
   });
 }
@@ -303,6 +342,11 @@ function dedupeEntities(entities: readonly F1EntityReference[]): readonly F1Enti
     } : entity);
   }
   return [...byKey.values()];
+}
+
+function providerDriverEntity(driver: ProviderDriver): F1EntityReference {
+  const name = `${driver.givenName} ${driver.familyName}`;
+  return { type: "DRIVER", query: name, name, externalId: driver.externalId };
 }
 
 function normalize(value: string): string {

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type {
   HistoricalRaceProvider,
+  ProviderDriver,
   ProviderDriverCareer,
   ProviderDriverStanding,
   ProviderProvenance,
@@ -10,11 +11,12 @@ import type {
 } from "../contracts";
 import { ProviderFailure } from "../errors";
 import type { ProviderRequestClient, ProviderResponse } from "../requestClient";
-import { jolpicaDriverStandingsResponseSchema, jolpicaRaceResponseSchema, type JolpicaRace } from "./schemas";
+import { jolpicaDriversResponseSchema, jolpicaDriverStandingsResponseSchema, jolpicaRaceResponseSchema, type JolpicaRace } from "./schemas";
 
 const HISTORICAL_TTL_MS = 24 * 60 * 60 * 1_000;
 const CAREER_PAGE_SIZE = 100;
 const MAX_CAREER_RESULTS = 2_000;
+const MAX_DRIVER_DIRECTORY_SIZE = 2_000;
 
 export class JolpicaAdapter implements HistoricalRaceProvider {
   constructor(
@@ -62,6 +64,46 @@ export class JolpicaAdapter implements HistoricalRaceProvider {
         provenance,
       })),
     };
+  }
+
+  async listDrivers(): Promise<readonly ProviderDriver[]> {
+    const drivers: ProviderDriver[] = [];
+    let offset = 0;
+    let total = 0;
+    do {
+      const response = await this.get(`drivers.json?limit=${CAREER_PAGE_SIZE}&offset=${offset}`);
+      const parsed = jolpicaDriversResponseSchema.safeParse(response.data);
+      if (!parsed.success) {
+        throw new ProviderFailure("schemaDrift", "jolpica", "Jolpica driver directory did not match the expected contract", {
+          sourceUrl: response.sourceUrl,
+          issueCount: parsed.error.issues.length,
+        });
+      }
+      const pageLimit = Number(parsed.data.MRData.limit ?? CAREER_PAGE_SIZE);
+      total = Number(parsed.data.MRData.total ?? parsed.data.MRData.DriverTable.Drivers.length);
+      if (!Number.isInteger(pageLimit) || pageLimit < 1 || !Number.isInteger(total) || total < 0) {
+        throw new ProviderFailure("schemaDrift", "jolpica", "Jolpica driver-directory pagination metadata was invalid", {
+          sourceUrl: response.sourceUrl,
+        });
+      }
+      if (total > MAX_DRIVER_DIRECTORY_SIZE) {
+        throw new ProviderFailure("unsupported", "jolpica", "Jolpica driver directory exceeded the supported pagination bound", {
+          total,
+        });
+      }
+      drivers.push(...parsed.data.MRData.DriverTable.Drivers.map((driver) => ({
+        externalId: driver.driverId,
+        givenName: driver.givenName,
+        familyName: driver.familyName,
+        code: driver.code,
+        permanentNumber: driver.permanentNumber ? Number(driver.permanentNumber) : undefined,
+        nationality: driver.nationality,
+      })));
+      offset += pageLimit;
+      if (parsed.data.MRData.DriverTable.Drivers.length === 0) break;
+    } while (offset < total);
+
+    return [...new Map(drivers.map((driver) => [driver.externalId, driver])).values()];
   }
 
   async getDriverCareer(driverExternalId: string): Promise<ProviderDriverCareer | null> {

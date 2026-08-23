@@ -39,9 +39,11 @@ describe("OpenAiAdapter", () => {
       const body = JSON.parse(String(init?.body));
       expect(body.tools[0]).toMatchObject({
         type: "web_search",
-        filters: { allowed_domains: expect.arrayContaining(["formula1.com", "fia.com"]) },
+        filters: { allowed_domains: expect.arrayContaining(["formula1.com", "fia.com", "motorsport.com"]) },
       });
       expect(body.tool_choice).toBe("required");
+      expect(body.max_tool_calls).toBe(3);
+      expect(body.input[0].content).toContain("driver and team careers");
       return new Response(JSON.stringify({
         id: "resp_web",
         model: "gpt-5-mini",
@@ -93,17 +95,11 @@ describe("OpenAiAdapter", () => {
     await expect(adapter.classifyF1Scope("Who is an unfamiliar future F1 rookie?", [])).resolves.toBe("F1_IN_SCOPE");
   });
 
-  it("broadens from official sources only after primary evidence is insufficient", async () => {
+  it("permits approved secondary reporting in the same bounded search when primary coverage is incomplete", async () => {
     const fetcher = vi.fn(async (_url: string | URL | Request, init?: RequestInit) => {
       const body = JSON.parse(String(init?.body));
       const domains = body.tools[0].filters.allowed_domains as string[];
-      if (!domains.includes("motorsport.com")) {
-        return new Response(JSON.stringify({
-          id: "resp_primary",
-          model: "gpt-5-mini",
-          output: [{ type: "message", content: [{ type: "output_text", text: "INSUFFICIENT_TRUSTED_EVIDENCE" }] }],
-        }), { status: 200 });
-      }
+      expect(domains).toEqual(expect.arrayContaining(["formula1.com", "motorsport.com"]));
       return new Response(JSON.stringify({
         id: "resp_secondary",
         model: "gpt-5-mini",
@@ -123,7 +119,7 @@ describe("OpenAiAdapter", () => {
     ]);
     const result = await adapter.retrieveF1Web({ question: "Why was Singapore 2008 controversial?", plan, structuredFacts: [] });
 
-    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(fetcher).toHaveBeenCalledOnce();
     expect(result.sources).toEqual([expect.objectContaining({ provider: "motorsport.com" })]);
   });
 });

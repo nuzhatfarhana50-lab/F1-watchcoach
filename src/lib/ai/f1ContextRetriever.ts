@@ -304,7 +304,7 @@ function mergeProviderResult(context: RaceQuestionContext, result: ProviderRaceR
   });
 }
 
-function deterministicRaceAnswer(question: string, context: RaceQuestionContext): { answer: string; sourceIds: readonly string[] } {
+function deterministicRaceAnswer(question: string, context: RaceQuestionContext): { answer: string; sourceIds: readonly string[] } | undefined {
   const normalized = normalize(question);
   const resultSource = context.sources.find((source) => source.provider === "jolpica") ?? context.sources[0];
   const explanationSources = context.sources.filter((source) => source.provider !== "jolpica");
@@ -319,7 +319,7 @@ function deterministicRaceAnswer(question: string, context: RaceQuestionContext)
       sourceIds: [resultSource.id],
     };
   }
-  if (/\b(who won|winner|won)\b/i.test(question) && context.results[0]) {
+  if (/\b(who won|winner)\b/i.test(question) && !/\b(why|how)\b/i.test(question) && context.results[0]) {
     const winner = context.results.find((row) => row.position === 1) ?? context.results[0];
     return { answer: `${winner.driver} won the ${context.race.season} ${context.race.name} for ${winner.team}, completing ${winner.lapsCompleted} laps.`, sourceIds: [resultSource.id] };
   }
@@ -347,10 +347,7 @@ function deterministicRaceAnswer(question: string, context: RaceQuestionContext)
     const topThree = context.results.filter((row) => row.position && row.position <= 3).map((row) => `P${row.position} ${row.driver}`).join(", ");
     return { answer: `The ${context.race.season} ${context.race.name} took place at ${context.race.circuit}. ${topThree ? `The podium was ${topThree}.` : "The linked classification establishes the race record."}`, sourceIds: [resultSource.id] };
   }
-  return {
-    answer: `The connected F1 source identifies the ${context.race.season} ${context.race.name} at ${context.race.circuit}, but it does not establish the requested detail.`,
-    sourceIds: [resultSource.id],
-  };
+  return undefined;
 }
 
 function deterministicCareerAnswer(
@@ -359,6 +356,9 @@ function deterministicCareerAnswer(
   entities: readonly F1EntityReference[],
 ): { answer: string; sourceIds: readonly string[] } | undefined {
   if (careers.length === 0) return undefined;
+  if (/\b(championships?|world titles?|drivers['’]? titles?|poles?|qualifying|fastest laps?|dnfs?|retirements?|career points?)\b/i.test(question)) {
+    return undefined;
+  }
   const sourceIds = careers.map((career) => careerSource(career).id);
   const teamEntity = entities.find((entity) => entity.type === "TEAM");
   const teamFilter = teamEntity ? normalize(teamEntity.name.replace("Scuderia ", "")) : undefined;
@@ -388,7 +388,7 @@ function deterministicCareerAnswer(
     const seasonQualifier = seasonFilter ? ` in ${seasonFilter}` : "";
     return { answer: `${driverName(career)} recorded ${countLabel(metrics.starts, "start")}, ${countLabel(metrics.wins, "win")} and ${countLabel(metrics.podiums, "podium")}${qualifier}${seasonQualifier} in the connected Jolpica results.`, sourceIds };
   }
-  if (/\b(who is|career|tell me about)\b/i.test(question)) {
+  if (/\b(who is|who was|career|history|tell me about|achievements?|credentials?|qualifications?)\b/i.test(question)) {
     const nationality = career.driver.nationality ? `${career.driver.nationality} ` : "";
     return {
       answer: `${driverName(career)} is a ${nationality}Formula 1 driver whose connected results span ${career.firstSeason}–${career.lastSeason}. Across ${countLabel(career.starts, "start")}, the record shows ${countLabel(career.wins, "win")} and ${countLabel(career.podiums, "podium")}, with ${teams.map((team) => team.name).join(", ")}.`,

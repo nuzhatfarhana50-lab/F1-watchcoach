@@ -163,6 +163,7 @@ export type OpenF1SessionEvidence = {
 export interface HistoricalRaceProvider {
   listRaces(season: number): Promise<readonly ProviderRaceSummary[]>;
   getRaceResult(season: number, round: number): Promise<ProviderRaceResult | null>;
+  listDrivers?(): Promise<readonly ProviderDriver[]>;
   getDriverCareer?(driverExternalId: string): Promise<ProviderDriverCareer | null>;
   getDriverStandings?(season: number): Promise<readonly ProviderDriverStanding[]>;
 }

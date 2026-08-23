@@ -48,6 +48,38 @@ describe("JolpicaAdapter", () => {
     });
   });
 
+  it("paginates the historical driver directory for dynamic identity resolution", async () => {
+    const requestedOffsets: string[] = [];
+    const directoryClient: ProviderRequestClient = {
+      async get(request) {
+        const offset = new URL(request.url).searchParams.get("offset") ?? "0";
+        requestedOffsets.push(offset);
+        const driver = offset === "0"
+          ? { driverId: "fangio", givenName: "Juan Manuel", familyName: "Fangio", nationality: "Argentine" }
+          : { driverId: "stewart", givenName: "Jackie", familyName: "Stewart", nationality: "British" };
+        return {
+          data: {
+            MRData: {
+              limit: "1",
+              offset,
+              total: "2",
+              DriverTable: { Drivers: [driver] },
+            },
+          },
+          fetchedAt: "2026-08-23T00:00:00.000Z",
+          sourceUrl: request.url,
+        };
+      },
+    };
+
+    const drivers = await new JolpicaAdapter(directoryClient).listDrivers();
+    expect(requestedOffsets).toEqual(["0", "1"]);
+    expect(drivers).toEqual([
+      expect.objectContaining({ externalId: "fangio", familyName: "Fangio" }),
+      expect.objectContaining({ externalId: "stewart", familyName: "Stewart" }),
+    ]);
+  });
+
   it("normalizes a driver career and calculates deterministic totals", async () => {
     const career = await new JolpicaAdapter(client).getDriverCareer("hamilton");
     expect(career).toMatchObject({

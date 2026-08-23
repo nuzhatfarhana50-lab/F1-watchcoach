@@ -2,8 +2,15 @@ import type { RaceFixtureCollection } from "@/lib/f1/domain/types";
 import { canonicalRaceFixtures } from "@/lib/f1/fixtures/canonical-races";
 import type { HistoricalRaceProvider } from "@/lib/f1/providers/contracts";
 
+import { AiGenerationError } from "./errors";
 import { F1ContextRetriever, type F1MediaReference } from "./f1ContextRetriever";
-import { classifyF1ScopeDeterministically, planF1Query, resolveF1Entities } from "./f1QueryPlanner";
+import {
+  classifyF1ScopeDeterministically,
+  planF1Query,
+  resolveF1Entities,
+  resolveProviderDriverEntities,
+  shouldResolveDriverDirectory,
+} from "./f1QueryPlanner";
 import type { F1ScopeClassifier, F1WebRetriever, RaceQuestionGenerator } from "./ports";
 import { limitRaceQuestionAnswer } from "./raceQuestionLimits";
 import {
@@ -33,7 +40,7 @@ export class RaceQuestionService {
   private readonly retriever: F1ContextRetriever;
 
   constructor(
-    provider: HistoricalRaceProvider,
+    private readonly provider: HistoricalRaceProvider,
     private readonly generator?: RaceQuestionGenerator,
     private readonly fixtures: RaceFixtureCollection = canonicalRaceFixtures,
     private readonly webRetriever?: F1WebRetriever,
@@ -55,7 +62,16 @@ export class RaceQuestionService {
     }
 
     const { question, conversation } = parsed.data;
-    const entities = resolveF1Entities(question, this.fixtures, conversation);
+    let directoryProviderFailed = false;
+    let entities = resolveF1Entities(question, this.fixtures, conversation);
+    if (this.provider.listDrivers && shouldResolveDriverDirectory(question, entities)) {
+      try {
+        const providerDrivers = await this.provider.listDrivers();
+        entities = [...entities, ...resolveProviderDriverEntities(question, providerDrivers)];
+      } catch {
+        directoryProviderFailed = true;
+      }
+    }
     let scope = classifyF1ScopeDeterministically(question, entities, conversation);
     if (!scope && this.scopeClassifier) {
       try {
@@ -75,6 +91,7 @@ export class RaceQuestionService {
     const context = await this.retriever.retrieve(question, plan);
 
     if (context.requiresWebSearch) {
+      let webUnavailable = false;
       if (this.webRetriever) {
         try {
           const web = await this.webRetriever.retrieveF1Web({ question, plan, structuredFacts: context.structuredFacts });
@@ -87,7 +104,8 @@ export class RaceQuestionService {
             raceHref: context.raceHref,
             generated: true,
           };
-        } catch {
+        } catch (error) {
+          webUnavailable = !(error instanceof AiGenerationError) || error.kind !== "insufficientEvidence";
           // Continue to an explicit evidence state; narrative/current questions never fall back to model memory.
         }
       }
@@ -95,10 +113,11 @@ export class RaceQuestionService {
       const requiresNarrativeEvidence = plan.intents.some((intent) => NARRATIVE_INTENTS.has(intent));
       const requiresFreshEvidence = plan.currentness === "CURRENT" || plan.currentness === "CURRENT_AND_HISTORICAL";
       if (requiresNarrativeEvidence || requiresFreshEvidence || !context.deterministicAnswer) {
+        const connectedSourceFailed = directoryProviderFailed || context.providerFailed || webUnavailable;
         return {
-          status: context.providerFailed ? "unavailable" : "needsContext",
-          message: context.providerFailed
-            ? "The connected F1 sources are temporarily unavailable, so I can’t answer that without guessing."
+          status: connectedSourceFailed ? "unavailable" : "needsContext",
+          message: connectedSourceFailed
+            ? "Trusted F1 web search or a connected data provider is temporarily unavailable. Try that Formula 1 question again shortly."
             : "I recognize that as an F1 question, but the connected evidence is not sufficient to answer it without guessing.",
         };
       }
@@ -143,8 +162,8 @@ export class RaceQuestionService {
     }
 
     return {
-      status: context.providerFailed ? "unavailable" : "needsContext",
-      message: context.providerFailed
+      status: directoryProviderFailed || context.providerFailed ? "unavailable" : "needsContext",
+      message: directoryProviderFailed || context.providerFailed
         ? "The connected F1 sources are temporarily unavailable. Try that F1 question again shortly."
         : "I recognize that as an F1 question, but I need a more specific driver, team, race, season, or concept to retrieve evidence.",
     };

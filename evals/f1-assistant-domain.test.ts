@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { classifyF1ScopeDeterministically, planF1Query, resolveF1Entities } from "@/lib/ai/f1QueryPlanner";
+import {
+  classifyF1ScopeDeterministically,
+  planF1Query,
+  resolveF1Entities,
+  resolveProviderDriverEntities,
+  shouldResolveDriverDirectory,
+} from "@/lib/ai/f1QueryPlanner";
 import { RaceQuestionService } from "@/lib/ai/raceQuestionService";
 import { canonicalRaceFixtures } from "@/lib/f1/fixtures/canonical-races";
 import type { HistoricalRaceProvider } from "@/lib/f1/providers/contracts";
@@ -58,6 +64,31 @@ describe("Universal F1 assistant evaluation", () => {
     expect(results.every((result) => result.status === "blocked")).toBe(true);
     expect(listRaces).not.toHaveBeenCalled();
     expect(getRaceResult).not.toHaveBeenCalled();
+  });
+
+  it("resolves representative historical drivers beyond the curated alias table", () => {
+    const drivers = [
+      { externalId: "fangio", givenName: "Juan Manuel", familyName: "Fangio" },
+      { externalId: "clark", givenName: "Jim", familyName: "Clark" },
+      { externalId: "stewart", givenName: "Jackie", familyName: "Stewart" },
+      { externalId: "hill", givenName: "Graham", familyName: "Hill" },
+      { externalId: "villeneuve", givenName: "Gilles", familyName: "Villeneuve" },
+    ];
+    const questions = [
+      "Tell me about Juan Manuel Fangio",
+      "How many races did Jim Clark win?",
+      "Who was Jackie Stewart?",
+      "What was Graham Hill's F1 career?",
+      "What is Gilles Villeneuve's history?",
+    ];
+
+    for (const question of questions) {
+      const localEntities = resolveF1Entities(question, canonicalRaceFixtures);
+      expect(shouldResolveDriverDirectory(question, localEntities), question).toBe(true);
+      const providerEntities = resolveProviderDriverEntities(question, drivers);
+      expect(providerEntities, question).toHaveLength(1);
+      expect(classifyF1ScopeDeterministically(question, providerEntities), question).toBe("F1_IN_SCOPE");
+    }
   });
 
   it("marks every narrative/current category for web evidence while keeping structured results direct", () => {

@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { canonicalRaceFixtures } from "@/lib/f1/fixtures/canonical-races";
 
-import { classifyF1ScopeDeterministically, planF1Query, resolveF1Entities } from "./f1QueryPlanner";
+import {
+  classifyF1ScopeDeterministically,
+  planF1Query,
+  resolveF1Entities,
+  resolveProviderDriverEntities,
+  shouldResolveDriverDirectory,
+} from "./f1QueryPlanner";
 
 describe("F1 query routing", () => {
   it.each([
@@ -100,5 +106,29 @@ describe("F1 query routing", () => {
     const question = "Tell me about juan manuel fangio";
     const entities = resolveF1Entities(question, canonicalRaceFixtures);
     expect(classifyF1ScopeDeterministically(question, entities)).toBeNull();
+  });
+
+  it("resolves historical drivers outside the curated alias table from the provider directory", () => {
+    const question = "How many races did Jackie Stewart win?";
+    const localEntities = resolveF1Entities(question, canonicalRaceFixtures);
+    expect(shouldResolveDriverDirectory(question, localEntities)).toBe(true);
+
+    const providerEntities = resolveProviderDriverEntities(question, [
+      { externalId: "fangio", givenName: "Juan Manuel", familyName: "Fangio" },
+      { externalId: "stewart", givenName: "Jackie", familyName: "Stewart" },
+    ]);
+    expect(providerEntities).toEqual([
+      expect.objectContaining({ type: "DRIVER", externalId: "stewart", name: "Jackie Stewart" }),
+    ]);
+    expect(classifyF1ScopeDeterministically(question, providerEntities)).toBe("F1_IN_SCOPE");
+    expect(planF1Query("How many championships did Jackie Stewart win?", "F1_IN_SCOPE", providerEntities)).toMatchObject({
+      needsStructuredData: true,
+      needsWebSearch: true,
+    });
+  });
+
+  it("does not query the driver directory for an obvious non-F1 request", () => {
+    const question = "How do I make noodles?";
+    expect(shouldResolveDriverDirectory(question, [])).toBe(false);
   });
 });

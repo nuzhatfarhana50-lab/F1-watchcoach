@@ -128,13 +128,7 @@ export class OpenAiAdapter implements ExplanationGenerator, EmbeddingGenerator, 
     const cached = this.webCache.get(cacheKey);
     if (cached && cached.expiresAt > Date.now()) return cached.value;
 
-    let value: { answer: string; sources: readonly RaceQuestionSource[] };
-    try {
-      value = await this.searchF1Web(input, trustedF1PrimaryDomains);
-    } catch (error) {
-      if (!(error instanceof AiGenerationError) || error.kind !== "insufficientEvidence") throw error;
-      value = await this.searchF1Web(input, trustedF1WebDomains);
-    }
+    const value = await this.searchF1Web(input, trustedF1WebDomains);
     const ttlMs = input.plan.currentness === "CURRENT" || input.plan.currentness === "CURRENT_AND_HISTORICAL"
       ? 5 * 60 * 1_000
       : 24 * 60 * 60 * 1_000;
@@ -159,14 +153,15 @@ export class OpenAiAdapter implements ExplanationGenerator, EmbeddingGenerator, 
         search_context_size: input.plan.currentness === "CURRENT" || input.plan.currentness === "CURRENT_AND_HISTORICAL" ? "high" : "medium",
       }],
       tool_choice: "required",
+      max_tool_calls: 3,
       input: [
         {
           role: "system",
-          content: "You are F1 Watchcoach, a Formula 1-only teaching companion. Search only the configured trusted domains. Answer directly in 2–5 short sentences and no more than 120 words. Include only context needed to understand why the answer matters. Use supplied structured facts where relevant. Never invent a result, quote, motive, regulation, statistic, event, or source. Distinguish confirmed facts from interpretation. If the configured sources cannot establish the requested answer, begin the response exactly with INSUFFICIENT_TRUSTED_EVIDENCE. Do not answer non-F1 material.",
+          content: `You are F1 Watchcoach, a Formula 1-only teaching companion. Answer in-scope questions across driver and team careers, race history, results, incidents, strategy, engineering, regulations, and F1 business. Search only the configured trusted domains and prefer primary sources from ${trustedF1PrimaryDomains.join(", ")}; use the approved secondary domains when primary coverage is incomplete. Interpret ambiguous wording in its Formula 1 meaning. Search until the core answer has citation support, then answer directly in 2–5 short sentences and no more than 120 words. Include only context needed to understand why the answer matters. Use supplied structured facts where relevant. Never invent a result, quote, motive, regulation, statistic, event, or source. Distinguish confirmed facts from interpretation. If the configured sources cannot establish the requested answer, begin the response exactly with INSUFFICIENT_TRUSTED_EVIDENCE. Do not answer non-F1 material.`,
         },
         { role: "user", content: JSON.stringify(input) },
       ],
-    });
+    }, 45_000);
     const parsed = responseSchema.safeParse(response);
     if (!parsed.success) throw new AiGenerationError("invalidOutput", "OpenAI web response envelope was invalid");
     const outputText = parsed.data.output.flatMap((item) => item.content ?? []).find((item) => item.type === "output_text");
@@ -213,14 +208,14 @@ export class OpenAiAdapter implements ExplanationGenerator, EmbeddingGenerator, 
     try { return JSON.parse(text); } catch (error) { throw new AiGenerationError("invalidOutput", "OpenAI structured output was not JSON", { cause: error }); }
   }
 
-  private async request(path: string, body: unknown): Promise<unknown> {
+  private async request(path: string, body: unknown, timeoutMs = 30_000): Promise<unknown> {
     let response: Response;
     try {
       response = await this.fetcher(`https://api.openai.com${path}`, {
         method: "POST",
         headers: { Authorization: `Bearer ${this.apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(30_000),
+        signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
       throw new AiGenerationError("unavailable", "OpenAI could not be reached", { cause: error });

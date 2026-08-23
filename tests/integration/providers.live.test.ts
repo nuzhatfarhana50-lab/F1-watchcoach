@@ -17,10 +17,13 @@ describe.skipIf(!live)("live F1 provider smoke checks", () => {
 
   it("reads structured Jolpica driver-career and championship records", async () => {
     const adapter = new JolpicaAdapter(client);
+    const drivers = await adapter.listDrivers();
     const [career, standings] = await Promise.all([
       adapter.getDriverCareer("sainz"),
       adapter.getDriverStandings(2012),
     ]);
+    expect(drivers.length).toBeGreaterThan(800);
+    expect(drivers.some((driver) => driver.externalId === "stewart" && driver.familyName === "Stewart")).toBe(true);
     expect(career?.driver.familyName).toBe("Sainz");
     expect(career?.results.length).toBeGreaterThan(100);
     expect(career?.lastSeason).toBeGreaterThanOrEqual(2024);
