@@ -24,7 +24,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <a className="skip-link" href="#main-content">
           Skip to content
         </a>
-        {isClerkConfigured() ? <ClerkProvider>{content}</ClerkProvider> : content}
+        {isClerkConfigured() ? (
+          <ClerkProvider
+            signInUrl="/sign-in"
+            signUpUrl="/sign-in"
+            signInFallbackRedirectUrl="/learning"
+            signUpFallbackRedirectUrl="/learning"
+            afterSignOutUrl="/"
+          >
+            {content}
+          </ClerkProvider>
+        ) : content}
         <Analytics />
         <SpeedInsights />
       </body>

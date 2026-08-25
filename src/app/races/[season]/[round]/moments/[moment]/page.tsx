@@ -63,13 +63,13 @@ export default async function MomentPage({ params }: MomentPageProps) {
         <Link href={moment.race.href}>{moment.race.name}</Link><span aria-hidden="true">/</span>
         <span>Moment</span>
       </nav>
-      <header className="moment-hero">
+      <header className="moment-hero" data-lap={moment.lapNumber ?? undefined} data-kind={moment.type}>
         <div className="moment-hero-meta"><span>{moment.type.replace(/([A-Z])/g, " $1")}</span>{moment.lapNumber ? <span>Lap {moment.lapNumber}</span> : null}<span>{moment.race.season} {moment.race.name}</span></div>
         <h1>{moment.title}</h1>
         <p>{moment.summary}</p>
-        <div className="participant-row" aria-label="Participants">
-          {moment.drivers.map((driver) => <span key={driver.id}>{driver.name}</span>)}
-          {moment.teams.map((team) => <span key={team.id}>{team.name}</span>)}
+        <div className="participant-row" role="list" aria-label="Participants">
+          {moment.drivers.map((driver) => <span key={driver.id} role="listitem">{driver.name}</span>)}
+          {moment.teams.map((team) => <span key={team.id} role="listitem">{team.name}</span>)}
         </div>
       </header>
       <MomentMedia media={moment.media} />

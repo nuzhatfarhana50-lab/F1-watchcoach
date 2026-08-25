@@ -106,7 +106,16 @@ The public Server Action validates a 300-character question plus at most six bou
 
 Clerk handles identity only. F1 Watchcoach creates an internal `User` keyed by `externalAuthId` and stores race progress, moment encounters, concept progression, interests, driver/team preferences, explanation depth, and learning style in PostgreSQL. Server Actions derive identity on the server and never accept a user ID from the browser. Repository queries are scoped by compound user keys, and concept progression follows `unseen → encountered → learning → understood → reinforced` without backward or skipped transitions.
 
-Authentication is optional for local development and deterministic CI. Configure both Clerk variables to enable `/sign-in` and saving; configure neither to retain the full anonymous learning journey.
+Google OAuth is the only application sign-in method. `/sign-in` starts a fixed `oauth_google` flow, `/sso-callback` completes it, and both new and returning Google users continue to `/learning`. The authenticated learning page calls Clerk's server-side `auth.protect()` before reading internal user data; learning Server Actions independently derive the active Clerk user and fail closed when no session exists. Public race browsing, moments, explanations, and the F1 assistant remain anonymous.
+
+Authentication is optional for deterministic CI. For local development, either configure both Clerk variables or run `npx -y clerk@latest init`; Clerk's keyless bootstrap provisions a claimable development instance and writes its development key pair directly to the ignored `.env.local`. Both Clerk route variables must point to `/sign-in`, because Google handles account creation and returning-user sign-in through the same application control. In the Clerk Dashboard for the matching instance:
+
+1. Enable Google under sign-up/sign-in social connections.
+2. Disable email/password, email code/link, phone, passkey, enterprise, and every other social connection so the hosted instance matches the Google-only application boundary.
+3. Do not require profile fields that cannot be supplied by Google during the OAuth handoff.
+4. For production, configure Clerk's Google connection with the production Google OAuth credentials and the callback/redirect values Clerk provides, then verify the production domain before promotion.
+
+The app never receives a Google client secret directly and exposes no email/password or alternative-provider form. Redirects are fixed local paths rather than browser-supplied destinations, and sign-out returns to the public home page.
 
 ## Grounded AI and workflows
 
@@ -185,8 +194,9 @@ Copy `.env.example` to `.env.local`. Current variables are:
 - `OPENAI_GENERATION_MODEL`: optional, defaults to `gpt-5-mini`.
 - `OPENAI_EMBEDDING_MODEL`: optional, defaults to `text-embedding-3-small`.
 - `AI_WORKFLOW_SECRET`: optional 32+ character bearer secret for the internal workflow trigger.
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`: optional Clerk browser key; must be configured with `CLERK_SECRET_KEY`.
-- `CLERK_SECRET_KEY`: optional Clerk server key; never exposed to client code.
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`: optional Clerk browser key for the Google-only sign-in flow; must be configured with `CLERK_SECRET_KEY`.
+- `CLERK_SECRET_KEY`: optional Clerk server key from the same Clerk instance; never exposed to client code.
+- `NEXT_PUBLIC_CLERK_SIGN_IN_URL` and `NEXT_PUBLIC_CLERK_SIGN_UP_URL`: both `/sign-in`; new Google users and returning users share one OAuth entry point.
 - `INGESTION_SECRET`: optional 32+ character bearer secret for manual live-ingestion triggers.
 - `CRON_SECRET`: optional 32+ character bearer secret automatically sent by Vercel Cron.
 - `REDIS_REST_URL` and `REDIS_REST_TOKEN`: optional pair for shared ephemeral live state; in-memory state is used only for deterministic/local composition.
@@ -255,6 +265,9 @@ The five-minute cron in `vercel.json` needs Vercel Pro. Disable or change it for
 - **A historical race answer is limited:** Jolpica establishes calendars, classifications, and driver records; strategy, causation, controversies, and other narrative detail continue to trusted web evidence rather than model memory. If that external search times out, the response explicitly reports temporary source unavailability so the question can be retried.
 - **A season catalog is unavailable:** retry the request, confirm outbound access to `api.jolpi.ca`, and inspect the structured `Race catalog provider unavailable` log. Verified Watchcoach races remain available as fallback; OpenF1 failure removes only the timing-coverage indicator.
 - **Clerk sign-in works but saving fails:** verify `DATABASE_URL`, the Phase 5 migration, and that both Clerk keys belong to the same instance. Domain learning data belongs in PostgreSQL, not Clerk metadata.
+- **The Sign in control is missing locally:** run `npx -y clerk@latest init` to create a claimable development instance, then restart `npm run dev`. The CLI writes keys to `.env.local`; do not copy them into source files.
+- **Google is missing or another sign-in method appears:** open the matching Clerk instance's sign-up/sign-in settings, enable Google, and disable every other authentication strategy. The application deliberately renders only its Google button, but production provider availability is controlled by Clerk Dashboard configuration.
+- **Google returns to an OAuth error:** verify the Clerk instance/domain, the custom Google OAuth credentials in production, and the callback URI displayed by Clerk. Do not place Google OAuth secrets in `NEXT_PUBLIC_*` variables or repository files.
 - **Playwright cannot find Chromium:** run `npx playwright install chromium`, then retry `npm run test:e2e`.
 - **`npm audit` reports `deepmerge-ts`:** this is the documented Prisma CLI/config transitive advisory; do not apply npm's breaking forced downgrade. Re-evaluate when a compatible Prisma release is available.
 

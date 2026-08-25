@@ -4,7 +4,10 @@ import { NextResponse } from "next/server";
 
 import { isClerkConfigured } from "@/lib/auth/configuration";
 
-const configuredMiddleware = isClerkConfigured() ? clerkMiddleware() : null;
+const configuredMiddleware = isClerkConfigured() ? clerkMiddleware({
+  signInUrl: "/sign-in",
+  signUpUrl: "/sign-in",
+}) : null;
 
 export default function proxy(request: NextRequest, event: NextFetchEvent) {
   return configuredMiddleware ? configuredMiddleware(request, event) : NextResponse.next();

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { LearningPreferencesForm } from "@/app/_components/learning-preferences-form";
 import { SiteHeader } from "@/app/_components/site-header";
 import { isClerkConfigured } from "@/lib/auth/configuration";
-import { identityProvider } from "@/lib/auth/identity";
+import { requireExternalUserId } from "@/lib/auth/identity";
 import { getRaceLibraryService } from "@/lib/f1/application/composition";
 import { getLearningService } from "@/lib/learning/composition";
 
@@ -11,8 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function LearningPage() {
   if (!isClerkConfigured()) return <Frame><Unavailable message="Authentication is not configured in this environment." /></Frame>;
-  const externalAuthId = await identityProvider.currentExternalUserId();
-  if (!externalAuthId) return <Frame><Unavailable message="Sign in to save and resume your learning." signIn /></Frame>;
+  const externalAuthId = await requireExternalUserId();
 
   let data: Awaited<ReturnType<typeof loadLearningPage>> | null = null;
   try {
@@ -56,6 +55,6 @@ function Frame({ children }: { children: React.ReactNode }) {
   return <main id="main-content" className="app-shell"><SiteHeader />{children}</main>;
 }
 
-function Unavailable({ message, signIn = false }: { message: string; signIn?: boolean }) {
-  return <section className="empty-state" role="status"><h1>Learning memory unavailable</h1><p>{message}</p>{signIn ? <Link href="/sign-in">Sign in</Link> : <Link href="/races">Browse races</Link>}</section>;
+function Unavailable({ message }: { message: string }) {
+  return <section className="empty-state" role="status"><h1>Learning memory unavailable</h1><p>{message}</p><Link href="/races">Browse races</Link></section>;
 }

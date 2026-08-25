@@ -99,7 +99,7 @@ async function SeasonCatalog({ selectedSeason }: { selectedSeason: number }) {
             <h2 id="learning-races-title">Races with curated learning moments</h2>
             <p>These verified race records include evidence, explanation, concepts, and a genuine connection to another moment.</p>
           </div>
-          <div className="race-grid" aria-label="Curated learning races">
+          <div className="race-grid" role="region" aria-label="Curated learning races">
             {additionalLearningRaces.map((race) => <RaceCard key={race.id} race={race} />)}
           </div>
         </section>

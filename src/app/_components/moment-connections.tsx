@@ -4,7 +4,7 @@ import type { MomentDetailReadModel } from "@/lib/f1/application/raceLibraryServ
 
 export function MomentConnections({ connections }: { connections: MomentDetailReadModel["connections"] }) {
   return (
-    <section className="detail-section connect-section" aria-labelledby="connect-title">
+    <section className="detail-section connect-section" data-stage="03" aria-labelledby="connect-title">
       <header className="detail-section-heading">
         <p className="section-label">Connect · Real moment</p>
         <h2 id="connect-title">Recognize the same calculation elsewhere.</h2>

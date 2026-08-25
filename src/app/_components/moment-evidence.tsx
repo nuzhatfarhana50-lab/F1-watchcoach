@@ -2,7 +2,7 @@ import type { MomentDetailReadModel } from "@/lib/f1/application/raceLibraryServ
 
 export function MomentEvidence({ moment }: { moment: MomentDetailReadModel }) {
   return (
-    <section className="detail-section watch-section" aria-labelledby="watch-title">
+    <section className="detail-section watch-section" data-stage="01" aria-labelledby="watch-title">
       <header className="detail-section-heading">
         <p className="section-label">Watch · Evidence</p>
         <h2 id="watch-title">Start with what happened on track.</h2>

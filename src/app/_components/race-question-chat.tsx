@@ -29,7 +29,7 @@ export function RaceQuestionChat() {
         <p>
           Ask about drivers, teams, races, history, strategy, engineering, regulations, or the business of Formula 1.
         </p>
-        <div className="race-chat-boundary" aria-label="Question scope">
+        <div className="race-chat-boundary" role="group" aria-label="Question scope">
           <span aria-hidden="true">✓</span>
           Drivers, teams, races, history, strategy, engineering, regulations, and F1 business
         </div>
@@ -151,7 +151,7 @@ export function RaceQuestionChatPanel({
         </div>
       </form>
 
-      <div className="race-chat-suggestions" aria-label="Suggested F1 questions">
+      <div className="race-chat-suggestions" role="group" aria-label="Suggested F1 questions">
         {suggestions.map((suggestion) => (
           <button key={suggestion} type="button" onClick={() => submitQuestion(suggestion)} disabled={pending}>
             {suggestion}

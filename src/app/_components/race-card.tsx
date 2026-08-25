@@ -6,7 +6,7 @@ const dateFormatter = new Intl.DateTimeFormat("en", { day: "numeric", month: "sh
 
 export function RaceCard({ race }: { race: RaceLibraryItem }) {
   return (
-    <article className="race-card">
+    <article className="race-card" data-round={String(race.round).padStart(2, "0")} data-status={race.status}>
       <Link href={race.href} aria-label={`Open ${race.name} ${race.season}`}>
         <div className="race-card-kicker">
           <span>{race.season} · Round {race.round}</span>

@@ -15,7 +15,7 @@ export function RaceCatalogCard({ race }: { race: RaceCatalogItem }) {
     .map((source) => source.provider === "openf1" ? "OpenF1" : "Jolpica");
 
   return (
-    <article className="race-card race-catalog-card">
+    <article className="race-card race-catalog-card" data-round={String(race.round).padStart(2, "0")} data-status={race.status}>
       <Link href={race.href} aria-label={`Open ${race.name} ${race.season}`}>
         <div className="race-card-kicker">
           <span>{race.season} · Round {race.round}</span>

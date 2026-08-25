@@ -61,7 +61,7 @@ export default async function RacePage({ params }: RacePageProps) {
   return (
     <PageFrame>
       <nav className="breadcrumbs" aria-label="Breadcrumb"><Link href="/races">Races</Link><span aria-hidden="true">/</span><span>{race.season} · Round {race.round}</span></nav>
-      <header className="race-hero">
+      <header className="race-hero" data-round={String(race.round).padStart(2, "0")}>
         <div>
           <p className="eyebrow">{race.season} · Round {race.round}</p>
           <h1>{race.name}</h1>
@@ -77,7 +77,7 @@ export default async function RacePage({ params }: RacePageProps) {
         <div className="section-heading"><p className="section-label">Race moments</p><h2 id="moments-title">Where the race changed</h2><p>Structured evidence comes first. Full explanations open in Phase 3.</p></div>
         <ol className="moment-list">
           {race.moments.map((moment, index) => (
-            <li key={moment.id} className="moment-card">
+            <li key={moment.id} className="moment-card" data-lap={moment.lapNumber ?? undefined} data-type={moment.type}>
               <div className="moment-index">{String(index + 1).padStart(2, "0")}</div>
               <div>
                 <div className="moment-meta"><span>{moment.type.replace(/([A-Z])/g, " $1")}</span>{moment.lapNumber ? <span>Lap {moment.lapNumber}</span> : null}<span>{moment.evidenceCount} evidence records</span></div>
@@ -102,7 +102,7 @@ function ProviderRacePage({ detail }: { detail: ProviderRaceDetail }) {
   return (
     <PageFrame>
       <nav className="breadcrumbs" aria-label="Breadcrumb"><Link href={`/races?season=${race.season}`}>Races</Link><span aria-hidden="true">/</span><span>{race.season} · Round {race.round}</span></nav>
-      <header className="race-hero">
+      <header className="race-hero" data-round={String(race.round).padStart(2, "0")}>
         <div>
           <p className="eyebrow">{race.season} · Round {race.round}</p>
           <h1>{race.name}</h1>
