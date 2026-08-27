@@ -190,6 +190,7 @@ Copy `.env.example` to `.env.local`. Current variables are:
 
 - `DATABASE_URL`: PostgreSQL connection string, required only for migration, seed, and database-backed application operations.
 - `LOG_LEVEL`: optional structured log threshold (`debug`, `info`, `warn`, or `error`).
+- `F1_PROVIDER_MODE`: `live` by default; use `fixtures` only for deterministic tests or intentional offline regression work.
 - `OPENAI_API_KEY`: optional; enables ambiguous F1 scope classification, trusted-domain web grounding for narrative/current questions, grounded race explanations, and intentional live generation/evaluation. Structured results and curated fallbacks work without it.
 - `OPENAI_GENERATION_MODEL`: optional, defaults to `gpt-5-mini`.
 - `OPENAI_EMBEDDING_MODEL`: optional, defaults to `text-embedding-3-small`.

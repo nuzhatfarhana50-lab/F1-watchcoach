@@ -12,9 +12,16 @@ describe("parseServerEnvironment", () => {
     ).toEqual({
       NODE_ENV: "test",
       LOG_LEVEL: "info",
+      F1_PROVIDER_MODE: "live",
       OPENAI_GENERATION_MODEL: "gpt-5-mini",
       OPENAI_EMBEDDING_MODEL: "text-embedding-3-small",
     });
+  });
+
+  it("accepts an explicit deterministic provider mode", () => {
+    expect(
+      parseServerEnvironment({ NODE_ENV: "test", F1_PROVIDER_MODE: "fixtures" }),
+    ).toMatchObject({ F1_PROVIDER_MODE: "fixtures" });
   });
 
   it("reports invalid keys without including their values", () => {

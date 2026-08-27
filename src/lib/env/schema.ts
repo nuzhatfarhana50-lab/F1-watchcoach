@@ -10,6 +10,7 @@ const optionalPositiveInteger = z.preprocess(
 export const serverEnvironmentSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]),
   LOG_LEVEL: z.enum(logLevels).default("info"),
+  F1_PROVIDER_MODE: z.enum(["live", "fixtures"]).default("live"),
   OPENAI_API_KEY: optionalSecret,
   AI_WORKFLOW_SECRET: z.preprocess((value) => value === "" ? undefined : value, z.string().min(32).optional()),
   OPENAI_GENERATION_MODEL: z.string().min(1).default("gpt-5-mini"),

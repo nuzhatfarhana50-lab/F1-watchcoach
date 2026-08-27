@@ -30,6 +30,7 @@ export default defineConfig({
       AI_WORKFLOW_SECRET: "",
       CLERK_SECRET_KEY: "",
       CRON_SECRET: "",
+      F1_PROVIDER_MODE: "fixtures",
       INGESTION_SECRET: "",
       LIVE_SESSION_KEY: "",
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "",
