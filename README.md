@@ -131,7 +131,7 @@ Phase 6 adds a secured `POST /api/ingestion/live` trigger and `GET /api/cron/liv
 
 Redis REST stores short-lived session state. PostgreSQL remains authoritative: candidates are persisted only when the OpenF1 session key resolves to a known internal race, and deterministic IDs prevent duplicates on retry. Missing or failed Redis produces an explicit unavailable state; expired checkpoints are labeled stale. OpenF1 signals create event candidates, while AI is reserved for later explanation and never establishes the underlying event truth.
 
-The checked-in Vercel Cron schedule runs every five minutes and therefore requires a Vercel Pro plan. Set `LIVE_SESSION_KEY` only for the intended active race session. Hobby environments should remove or change that schedule before deployment; cron runs only in production.
+The checked-in Vercel Cron schedule runs once daily at 00:00 UTC so it remains compatible with the Vercel Hobby plan. Set `LIVE_SESSION_KEY` only for an intended active session. Race-frequency ingestion requires a Pro-plan schedule or explicit secured trigger calls; cron runs only in production.
 
 Workflow 4.8.3 currently brings transitive versions with published nanoid/undici advisories. Scoped npm overrides pin patched releases, and the production build plus deterministic suite verify compatibility. The remaining production audit finding is the documented Prisma CLI/config `deepmerge-ts` advisory.
 
@@ -251,7 +251,7 @@ Deployment is intentionally not automatic from this repository. GitHub Actions r
 7. Promote the already verified preview artifact only with explicit deployment approval.
 8. Scan production runtime errors immediately after promotion; roll back the alias if the release gate regresses.
 
-The five-minute cron in `vercel.json` needs Vercel Pro. Disable or change it for Hobby. Never place deployment tokens, Vercel project metadata secrets, database URLs, or provider keys in source control.
+The daily cron in `vercel.json` is Hobby-compatible. Race-frequency scheduling requires Vercel Pro; the secured manual trigger remains available. Never place deployment tokens, Vercel project metadata secrets, database URLs, or provider keys in source control.
 
 ## Troubleshooting
 
