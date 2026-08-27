@@ -2,6 +2,8 @@
 
 F1 Watchcoach is a race-first learning application that turns real Formula 1 moments into lasting understanding.
 
+Production: [f1-watchcoach.vercel.app](https://f1-watchcoach.vercel.app)
+
 Phases 0–7 are complete. The domain, timing, learning-content, AI-generation, embedding, and personal-learning persistence groups are live-verified on the dedicated Neon development project. Normalized provider adapters, a provider-backed race collection, public Watch → Learn → Connect journeys, grounded AI workflows, optional authenticated learning memory, replayable live ingestion, observability, and release documentation are implemented. Deterministic fixtures remain the fallback and keep tests and CI independent of hosted services.
 
 ## Local development
